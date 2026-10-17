@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; media-src 'self' https:; img-src 'self' data: https:;">
+    <title>WonderWow</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Floating decorations -->
+        <div class="floating-decoration star" style="top: 10%; left: 5%;">⭐</div>
+        <div class="floating-decoration heart" style="top: 20%; right: 10%;">💖</div>
+        <div class="floating-decoration cloud" style="top: 15%; left: 40%;">☁️</div>
+        <div class="floating-decoration sparkle" style="bottom: 30%; left: 8%;">✨</div>
+        <div class="floating-decoration rainbow" style="bottom: 25%; right: 5%;">🌈</div>
+        <div class="floating-decoration balloon" style="top: 35%; right: 15%;">🎈</div>
+        
+        <!-- Main Dashboard -->
+        <div id="dashboard" class="screen active">
+            <header class="dashboard-header">
+                <div class="mascot">🦁</div>
+                <h1 class="app-title">WonderWow</h1>
+                <p class="welcome-text">Choose a game to play!</p>
+            </header>
+
+            <div class="games-grid">
+                <!-- Tower Defense Game -->
+                <div class="game-card" onclick="loadGame('achi-game')" data-color="#FF6B6B">
+                    <div class="card-glow"></div>
+                    <div class="game-icon">🏰</div>
+                    <h2 class="game-title">Realm Guardians</h2>
+                    <p class="game-desc">Defend your realm with elemental towers!</p>
+                    <div class="play-badge">PLAY</div>
+                </div>
+
+                <!-- Animal Game -->
+                <div class="game-card" onclick="loadGame('animal-game')" data-color="#6BCF7F">
+                    <div class="card-glow"></div>
+                    <div class="game-icon">🦁</div>
+                    <h2 class="game-title">Jungle Animals</h2>
+                    <p class="game-desc">Meet fun jungle animal friends!</p>
+                    <div class="play-badge">PLAY</div>
+                </div>
+
+                <!-- Coloring Game -->
+                <div class="game-card" onclick="loadGame('coloring')" data-color="#FF69B4">
+                    <div class="card-glow"></div>
+                    <div class="game-icon">🎨</div>
+                    <h2 class="game-title">Coloring World</h2>
+                    <p class="game-desc">Color beautiful pictures with crayons!</p>
+                    <div class="play-badge">PLAY</div>
+                </div>
+
+                <!-- Passing Game -->
+                <div class="game-card" onclick="loadGame('passing-game')" data-color="#4169E1">
+                    <div class="card-glow"></div>
+                    <div class="game-icon">🐦</div>
+                    <h2 class="game-title">Pip's Adventure</h2>
+                    <p class="game-desc">Help Pip on an endless adventure!</p>
+                    <div class="play-badge">PLAY</div>
+                </div>
+
+                <!-- Scratch Card Game -->
+                <div class="game-card" onclick="loadGame('scratch-card')" data-color="#FFD700">
+                    <div class="card-glow"></div>
+                    <div class="game-icon">🎟️</div>
+                    <h2 class="game-title">Scratch & Match</h2>
+                    <p class="game-desc">Scratch cards to win coins!</p>
+                    <div class="play-badge">PLAY</div>
+                </div>
+
+                <!-- Puzzle Game -->
+                <div class="game-card" onclick="loadGame('puzzle-game')" data-color="#9B59B6">
+                    <div class="card-glow"></div>
+                    <div class="game-icon">🧩</div>
+                    <h2 class="game-title">Puzzle Fun</h2>
+                    <p class="game-desc">Solve fun picture puzzles!</p>
+                    <div class="play-badge">PLAY</div>
+                </div>
+            </div>
+
+            <footer class="dashboard-footer">
+                <div class="footer-mascots">
+                    <span>🐻</span>
+                    <span>🐰</span>
+                    <span>🐼</span>
+                </div>
+                <p>Have fun learning! 🎉</p>
+            </footer>
+        </div>
+
+        <!-- Game Container (games load here via iframe) -->
+        <div id="game-container" class="screen">
+            <iframe id="game-frame" src="" frameborder="0" allowfullscreen></iframe>
+        </div>
+
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="loading-overlay">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Loading game...</p>
+                <div class="loading-mascot">🎮</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+    <script src="cordova.js"></script>
+</body>
+</html>
