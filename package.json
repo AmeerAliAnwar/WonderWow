@@ -1,0 +1,37 @@
+{
+  "name": "wonderwow",
+  "displayName": "WonderWow",
+  "version": "1.0.0",
+  "description": "A collection of fun educational games for kids!",
+  "main": "index.js",
+  "scripts": {
+    "build:android": "cordova build android",
+    "build:android:release": "cordova build android --release",
+    "run:android": "cordova run android",
+    "prepare": "cordova prepare",
+    "clean": "cordova clean",
+    "setup": "npm install && cordova platform add android && cordova plugin add cordova-plugin-statusbar cordova-plugin-screen-orientation"
+  },
+  "keywords": [
+    "kids",
+    "games",
+    "educational",
+    "cordova",
+    "android"
+  ],
+  "author": "WonderWow Team",
+  "license": "MIT",
+  "devDependencies": {
+    "cordova": "^12.0.0",
+    "cordova-android": "^13.0.0"
+  },
+  "cordova": {
+    "plugins": {
+      "cordova-plugin-statusbar": {},
+      "cordova-plugin-screen-orientation": {}
+    },
+    "platforms": [
+      "android"
+    ]
+  }
+}
