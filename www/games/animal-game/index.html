@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jungle Animal Friends</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #87CEEB; /* Sky Blue */
+            font-family: 'Fredoka One', cursive;
+            user-select: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Portrait Warning Overlay */
+        #portrait-warning {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, #87CEEB 0%, #c3e5ad 100%);
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: #1e5631;
+            font-family: 'Fredoka One', cursive;
+            text-align: center;
+            padding: 20px;
+        }
+        #portrait-warning .rotate-icon {
+            font-size: 80px;
+            animation: rotatePhone 2s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes rotatePhone {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+        #portrait-warning h2 { font-size: 28px; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        #portrait-warning p { font-size: 18px; opacity: 0.9; }
+
+        @media (orientation: portrait) {
+            #portrait-warning { display: flex !important; }
+            #game-container { display: none !important; }
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #c3e5ad 50%);
+        }
+
+        /* --- Scenery --- */
+        .sun {
+            position: absolute;
+            top: 5%;
+            right: 10%;
+            width: 80px;
+            height: 80px;
+            background: #FFD700;
+            border-radius: 50%;
+            box-shadow: 0 0 40px #FFA500;
+            animation: sunPulse 4s infinite alternate;
+        }
+
+        .cloud {
+            position: absolute;
+            background: #fff;
+            border-radius: 50px;
+            opacity: 0.8;
+            animation: floatCloud 20s linear infinite;
+        }
+
+        .mountain {
+            position: absolute;
+            bottom: 30%; 
+            width: 0; 
+            height: 0; 
+            border-left: 150px solid transparent;
+            border-right: 150px solid transparent;
+            border-bottom: 300px solid #6c9a48;
+            z-index: 1;
+        }
+        .m-1 { left: -100px; border-bottom-color: #558b2f; }
+        .m-2 { right: -50px; bottom: 25%; border-width: 200px; border-bottom-color: #33691e; }
+        .m-3 { left: 20%; bottom: 28%; border-width: 120px; border-bottom-color: #7cb342; }
+
+        .grass-floor {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 45%;
+            background: linear-gradient(to bottom, #76c043 0%, #4a8a25 100%);
+            z-index: 2;
+            border-top: 10px solid #8dda55;
+        }
+
+        /* Decorative bushes */
+        .bush {
+            position: absolute;
+            bottom: 40%;
+            width: 80px;
+            height: 80px;
+            background: #2e7d32;
+            border-radius: 50% 50% 0 0;
+            z-index: 2;
+        }
+
+        /* --- Animal Styling --- */
+        .animal-wrapper {
+            position: absolute;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            transform-origin: bottom center;
+            transition: transform 0.3s;
+        }
+
+        .animal-wrapper:hover {
+            z-index: 50;
+            transform: scale(1.1); /* Slight hover effect */
+        }
+        
+        .direction-flipper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            transform-origin: center;
+        }
+
+        .shadow {
+            width: 70%;
+            height: 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 50%;
+            margin-top: -8px;
+            transition: all 0.3s;
+            z-index: 0;
+        }
+
+        .animal-img {
+            width: 120px; 
+            height: auto;
+            position: relative;
+            z-index: 2;
+            filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.2));
+            animation: breathe 3s infinite ease-in-out;
+        }
+
+        .emoji-fallback {
+            font-size: 80px;
+            line-height: 1;
+            text-align: center;
+            display: none; 
+        }
+
+        /* --- PHYSICS ANIMATIONS --- */
+        .animal-wrapper.active {
+            z-index: 1000 !important;
+            animation: moveForward 4s forwards linear;
+        }
+
+        .animal-wrapper.active .animal-img, 
+        .animal-wrapper.active .emoji-fallback {
+            animation: bobbing 0.5s infinite alternate ease-in-out;
+        }
+
+        .animal-wrapper.active .shadow {
+            animation: shadowPulse 0.5s infinite alternate ease-in-out;
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.03); }
+        }
+
+        @keyframes moveForward {
+            0% { transform: scale(1) translateY(0); }
+            100% { transform: scale(4.5) translateY(50px); }
+        }
+
+        @keyframes bobbing {
+            0% { transform: translateY(0) rotate(0deg); }
+            100% { transform: translateY(-15px) rotate(2deg); }
+        }
+
+        @keyframes shadowPulse {
+            0% { transform: scale(1); opacity: 0.3; }
+            100% { transform: scale(0.7); opacity: 0.1; } 
+        }
+
+        @keyframes sunPulse {
+            from { transform: scale(1); box-shadow: 0 0 40px #FFA500; }
+            to { transform: scale(1.1); box-shadow: 0 0 60px #FFD700; }
+        }
+
+        @keyframes floatCloud {
+            from { left: -20%; }
+            to { left: 120%; }
+        }
+
+        /* BUG FIX: Added missing spin keyframes for spinner */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* --- UI Overlay --- */
+        #display-text {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 5rem;
+            color: white;
+            text-shadow: 4px 4px 0px #000, -2px -2px 0 #000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 2000;
+            text-align: center;
+            width: 100%;
+        }
+        
+        #instruction-bar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 3000;
+        }
+
+        #instruction {
+            font-size: 1.5rem;
+            color: #1e5631;
+            background: rgba(255,255,255,0.9);
+            padding: 15px 25px;
+            border-radius: 30px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            text-align: center;
+            min-height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #8dda55;
+        }
+
+        .game-btn {
+            padding: 10px 20px;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .game-btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+
+
+        @media (max-width: 768px) {
+            .animal-img { width: 85px; }
+            .emoji-fallback { font-size: 50px; }
+            #display-text { font-size: 3rem; }
+            .animal-wrapper { margin: 0; }
+            #instruction { font-size: 1.1rem; }
+            .game-btn { font-size: 1rem; padding: 8px 16px; }
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- Portrait Warning -->
+<div id="portrait-warning">
+    <div class="rotate-icon">📱</div>
+    <h2>Please Rotate Your Device</h2>
+    <p>This game works best in landscape mode!</p>
+</div>
+
+<div id="game-container">
+    <div class="sun"></div>
+    <div class="cloud" style="top: 15%; width: 150px; height: 50px; animation-duration: 25s;"></div>
+    <div class="cloud" style="top: 25%; width: 100px; height: 40px; animation-duration: 18s; animation-delay: 5s;"></div>
+    
+    <div class="mountain m-1"></div>
+    <div class="mountain m-2"></div>
+    <div class="mountain m-3"></div>
+    
+    <div class="bush" style="left: 10%;"></div>
+    <div class="bush" style="right: 15%;"></div>
+    <div class="bush" style="left: 45%; bottom: 38%;"></div>
+
+    <div class="grass-floor"></div>
+
+    <div id="instruction-bar">
+        <div id="instruction">Click an animal to hear its sound!</div>
+    </div>
+
+    <div id="display-text">LION</div>
+
+    <div id="animals-layer"></div>
+</div>
+
+<script>
+    // High-Quality Flat Vector Side-View URLs
+    const animals = [
+        // Row 1 (Back)
+        { name: "Elephant", emoji: "🐘", url: "https://img.icons8.com/color/480/elephant.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/elephant.mp3", y: 35, x: 10 },
+        { name: "Giraffe", emoji: "🦒", url: "https://img.icons8.com/color/480/giraffe.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/sheep.mp3", y: 38, x: 28 }, 
+        { name: "Monkey", emoji: "🐵", url: "https://img.icons8.com/color/480/monkey.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/ape.mp3", y: 40, x: 48 },
+        { name: "Kangaroo", emoji: "🦘", url: "https://img.icons8.com/color/480/kangaroo.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/owl.mp3", y: 36, x: 68 }, 
+        { name: "Hippo", emoji: "🦛", url: "https://img.icons8.com/color/480/hippopotamus.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/pig.mp3", y: 32, x: 85 }, 
+
+        // Row 2 (Middle)
+        { name: "Lion", emoji: "🦁", url: "https://img.icons8.com/color/480/lion.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/lion.mp3", y: 22, x: 15 },
+        { name: "Zebra", emoji: "🦓", url: "https://img.icons8.com/color/480/zebra.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/zebra.mp3", y: 25, x: 38 },
+        { name: "Rhino", emoji: "🦏", url: "https://img.icons8.com/color/480/rhinoceros.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/cow.mp3", y: 20, x: 58 }, 
+        { name: "Bear", emoji: "🐻", url: "https://img.icons8.com/color/480/brown-bear.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/bear.mp3", y: 24, x: 78 },
+        
+        // Row 3 (Front)
+        { name: "Tiger", emoji: "🐯", url: "https://img.icons8.com/color/480/tiger.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/tiger.mp3", y: 8, x: 8 },
+        { name: "Deer", emoji: "🦌", url: "https://img.icons8.com/color/480/deer.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/moose.mp3", y: 12, x: 25 },
+        { name: "Fox", emoji: "🦊", url: "https://img.icons8.com/color/480/fox.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/dog.mp3", y: 6, x: 42 },
+        { name: "Panda", emoji: "🐼", url: "https://img.icons8.com/color/480/panda.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/pig.mp3", y: 5, x: 60 },
+        { name: "Rabbit", emoji: "🐰", url: "https://img.icons8.com/color/480/rabbit.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/cat.mp3", y: 4, x: 75 },
+        { name: "Cow", emoji: "🐮", url: "https://img.icons8.com/color/480/cow.png", soundUrl: "https://www.google.com/logos/fnbx/animal_sounds/cow.mp3", y: 9, x: 90 },
+    ];
+
+    const container = document.getElementById('animals-layer');
+    const displayTextEl = document.getElementById('display-text');
+
+    let isAnimating = false;
+
+    animals.forEach((animal, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('animal-wrapper');
+        
+        wrapper.style.bottom = `${animal.y}%`; 
+        wrapper.style.left = `${animal.x}%`;
+        wrapper.style.zIndex = 100 - animal.y; 
+        
+        const scaleFactor = 1 - (animal.y / 150); 
+        wrapper.style.transform = `scale(${scaleFactor})`; 
+
+        const flipper = document.createElement('div');
+        flipper.classList.add('direction-flipper');
+        
+        if (animal.x < 50) {
+            flipper.style.transform = "scaleX(-1)";
+        } else {
+            flipper.style.transform = "scaleX(1)";
+        }
+
+        const img = document.createElement('img');
+        img.src = animal.url;
+        img.alt = animal.name;
+        img.classList.add('animal-img');
+        
+        const emojiDiv = document.createElement('div');
+        emojiDiv.classList.add('emoji-fallback');
+        emojiDiv.innerText = animal.emoji;
+        
+        img.onerror = function() {
+            this.style.display = 'none'; 
+            emojiDiv.style.display = 'block';
+            if (animal.x < 50) {
+                 emojiDiv.style.transform = "scaleX(-1)";
+            }
+        };
+
+        const shadow = document.createElement('div');
+        shadow.classList.add('shadow');
+
+        flipper.appendChild(img);
+        flipper.appendChild(emojiDiv);
+        flipper.appendChild(shadow);
+        
+        wrapper.appendChild(flipper);
+        
+        wrapper.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            handleAnimalClick(animal, wrapper);
+        });
+
+        container.appendChild(wrapper);
+    });
+
+    function handleAnimalClick(animal, wrapper) {
+        if (isAnimating) return;
+        isAnimating = true;
+
+        // 1. Visual Walk Animation
+        wrapper.classList.add('active');
+
+        // 2. Play Animal Sound
+        playAnimalSound(animal.soundUrl, () => {
+            // 3. Speak the animal name
+            speakName(animal.name, () => {
+                displayTextEl.innerText = animal.name.toUpperCase();
+                displayTextEl.style.opacity = 1;
+                displayTextEl.style.color = getRandomColor();
+            });
+        });
+
+        // 4. Reset after animation
+        setTimeout(() => {
+            wrapper.classList.remove('active');
+            displayTextEl.style.opacity = 0;
+            isAnimating = false;
+        }, 3500); 
+    }
+
+    function playAnimalSound(url, onDone) {
+        if (!url) { 
+            if (onDone) onDone(); 
+            return; 
+        }
+        const audio = new Audio(url);
+        audio.volume = 0.7; 
+        audio.onended = onDone;
+        audio.onerror = () => { if (onDone) onDone(); };
+        audio.play().catch(() => { if (onDone) onDone(); });
+    }
+
+    function speakName(text, onCompleteCallback) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.pitch = 1.4; 
+            utterance.rate = 1.0;  
+            utterance.volume = 1;
+            utterance.onend = () => { if (onCompleteCallback) onCompleteCallback(); };
+            utterance.onerror = () => { if (onCompleteCallback) onCompleteCallback(); };
+            
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                const englishVoice = voices.find(v => v.lang.startsWith('en'));
+                if (englishVoice) {
+                    utterance.voice = englishVoice;
+                }
+            }
+            
+            window.speechSynthesis.speak(utterance);
+        } else {
+            if (onCompleteCallback) onCompleteCallback();
+        }
+    }
+
+    function getRandomColor() {
+        const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#FFFFFF'];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    // Initialize voices
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.getVoices();
+        };
+    }
+
+    // Lock to landscape orientation
+    function lockLandscape() {
+        if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+            window.screen.orientation.lock('landscape').catch(function(e) {});
+        }
+    }
+    document.addEventListener('DOMContentLoaded', lockLandscape);
+    document.addEventListener('deviceready', lockLandscape);
+
+</script>
+
+</body>
+</html>
