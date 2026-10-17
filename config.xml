@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.wonderwow.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>WonderWow</name>
+    <description>A collection of fun educational games for kids!</description>
+    <author email="support@wonderwow.com" href="https://wonderwow.com">WonderWow Team</author>
+    <content src="index.html" />
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="Fullscreen" value="true" />
+    <preference name="Orientation" value="default" />
+    <preference name="BackgroundColor" value="0xff667eea" />
+    <platform name="android">
+        <preference name="android-minSdkVersion" value="22" />
+        <preference name="android-targetSdkVersion" value="34" />
+        <preference name="android-compileSdkVersion" value="34" />
+        <preference name="AndroidWindowSplashScreenBackground" value="#667eea" />
+        <allow-intent href="http://*/*" />
+        <allow-intent href="https://*/*" />
+        <edit-config file="AndroidManifest.xml" mode="merge" target="/manifest/application">
+            <application android:usesCleartextTraffic="true" xmlns:android="http://schemas.android.com/apk/res/android" />
+        </edit-config>
+    </platform>
+    <plugin name="cordova-plugin-statusbar" spec="^3.0.0" />
+    <plugin name="cordova-plugin-screen-orientation" spec="^3.0.3" />
+    <access origin="*" />
+    <allow-navigation href="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+</widget>
