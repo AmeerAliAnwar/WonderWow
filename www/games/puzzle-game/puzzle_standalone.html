@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <title>Kids Puzzle — 3x3</title>
+  <style>
+*{box-sizing:border-box;margin:0;padding:0;font-family: 'Helvetica Neue', Arial, sans-serif}
+html,body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  touch-action:manipulation;
+}
+
+#game-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  padding-top: max(8px, env(safe-area-inset-top));
+}
+
+#topbar {
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: rgba(255,255,255,0.9);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.ui-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: #9fd3ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+}
+.ui-btn:active { transform: scale(0.95); }
+#btn-reset { background: #ffd0d0; }
+
+#level-info {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+#puzzle-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 0;
+}
+
+#preview-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+#preview-label {
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+  background: rgba(0,0,0,0.3);
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+#preview-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 2px;
+  background: rgba(255,255,255,0.2);
+  padding: 6px;
+  border-radius: 12px;
+  width: min(25vw, 120px);
+  height: min(25vw, 120px);
+}
+
+.preview-piece {
+  background: rgba(255,255,255,0.9);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(12px, 4vw, 20px);
+}
+.preview-piece.empty {
+  background: rgba(0,0,0,0.1);
+}
+
+#puzzle-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4px;
+  background: rgba(255,255,255,0.3);
+  padding: 8px;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  width: min(90vw, 90vh - 80px);
+  height: min(90vw, 90vh - 80px);
+  max-width: 400px;
+  max-height: 400px;
+}
+
+.puzzle-piece {
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(24px, 8vw, 48px);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.puzzle-piece:active {
+  transform: scale(0.95);
+}
+.puzzle-piece.empty {
+  background: rgba(0,0,0,0.1);
+  box-shadow: none;
+  cursor: default;
+}
+.puzzle-piece.correct {
+  background: linear-gradient(135deg, #a8edea, #fed6e3);
+}
+
+#message-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.7);
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+#message-overlay.show {
+  display: flex;
+}
+#message-box {
+  background: white;
+  padding: 32px;
+  border-radius: 24px;
+  text-align: center;
+  animation: popIn 0.3s ease-out;
+}
+@keyframes popIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+#message-box h2 {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+#message-box button {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 24px;
+  font-size: 18px;
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+#instructions-overlay {
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.8);
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+#instructions-overlay.hidden {
+  display: none;
+}
+#instructions-box {
+  background: white;
+  padding: 24px 32px;
+  border-radius: 24px;
+  text-align: center;
+  animation: popIn 0.3s ease-out;
+  max-width: 90%;
+}
+#instructions-box h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #667eea;
+}
+.instructions-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.instruction-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8f9fa;
+  padding: 12px 16px;
+  border-radius: 12px;
+  text-align: left;
+}
+.step-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.instruction-step p {
+  font-size: 14px;
+  color: #333;
+  margin: 0;
+}
+#start-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 14px 36px;
+  border-radius: 24px;
+  font-size: 18px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Portrait warning */
+#portrait-warning {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: white;
+  text-align: center;
+  padding: 20px;
+}
+#portrait-warning .icon { font-size: 60px; margin-bottom: 16px; animation: rotate 2s infinite; }
+@keyframes rotate { 0%,100%{transform:rotate(0)} 50%{transform:rotate(90deg)} }
+
+@media (orientation: portrait) {
+  #portrait-warning { display: flex !important; }
+  #game-container { display: none !important; }
+}
+  </style>
+</head>
+<body>
+  <div id="portrait-warning">
+    <div class="icon">📱</div>
+    <h2>Please Rotate Your Device</h2>
+    <p>This puzzle works best in landscape mode!</p>
+  </div>
+
+  <div id="game-container">
+    <div id="topbar">
+      <button id="btn-back" class="ui-btn" title="Back">⬅️</button>
+      <div id="level-info">Level 1 / 8</div>
+      <button id="btn-reset" class="ui-btn" title="Reset">🔄</button>
+    </div>
+    
+    <div id="puzzle-area">
+      <div id="preview-panel">
+        <div id="preview-label">🎯 Goal</div>
+        <div id="preview-board"></div>
+      </div>
+      <div id="puzzle-board"></div>
+    </div>
+  </div>
+
+  <div id="message-overlay">
+    <div id="message-box">
+      <h2>🎉 Great Job! 🎉</h2>
+      <p id="message-text">You solved the puzzle!</p>
+      <button id="next-btn">Next Level →</button>
+    </div>
+  </div>
+
+  <div id="instructions-overlay">
+    <div id="instructions-box">
+      <h2>🧩 How to Play 🧩</h2>
+      <div class="instructions-content">
+        <div class="instruction-step">
+          <span class="step-icon">👆</span>
+          <p>Tap a tile <strong>next to</strong> the empty space</p>
+        </div>
+        <div class="instruction-step">
+          <span class="step-icon">↔️</span>
+          <p>The tile will <strong>slide</strong> into the empty spot</p>
+        </div>
+        <div class="instruction-step">
+          <span class="step-icon">🎯</span>
+          <p>Arrange all emojis in <strong>order</strong> to win!</p>
+        </div>
+      </div>
+      <button id="start-btn">Got it! Let's Play →</button>
+    </div>
+  </div>
+
+  <script>
+// Puzzle levels - each is a 3x3 grid with emoji themes
+const LEVELS = [
+  { name: "Animals", pieces: ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", ""] },
+  { name: "Food", pieces: ["🍎", "🍊", "🍋", "🍇", "🍓", "🍒", "🍑", "🥝", ""] },
+  { name: "Sports", pieces: ["⚽", "🏀", "🏈", "⚾", "🎾", "🏐", "🎱", "🏓", ""] },
+  { name: "Weather", pieces: ["☀️", "🌙", "⭐", "🌈", "☁️", "⛈️", "❄️", "🌸", ""] },
+  { name: "Transport", pieces: ["🚗", "🚕", "🚌", "🚎", "🏎️", "🚓", "🚑", "✈️", ""] },
+  { name: "Ocean", pieces: ["🐳", "🐬", "🐟", "🐠", "🦈", "🐙", "🦀", "🦞", ""] },
+  { name: "Space", pieces: ["🚀", "🛸", "🌍", "🌙", "⭐", "☄️", "🪐", "👽", ""] },
+  { name: "Music", pieces: ["🎵", "🎶", "🎸", "🎹", "🥁", "🎺", "🎻", "🎤", ""] }
+];
+
+let currentLevel = 0;
+let board = [];
+let emptyIndex = 8;
+let moveCount = 0;
+let solved = false;
+
+const boardEl = document.getElementById('puzzle-board');
+const previewBoardEl = document.getElementById('preview-board');
+const levelInfo = document.getElementById('level-info');
+const messageOverlay = document.getElementById('message-overlay');
+const messageText = document.getElementById('message-text');
+const btnBack = document.getElementById('btn-back');
+const btnReset = document.getElementById('btn-reset');
+const btnNext = document.getElementById('next-btn');
+const instructionsOverlay = document.getElementById('instructions-overlay');
+const btnStart = document.getElementById('start-btn');
+
+// Check if user has seen instructions before
+const hasSeenInstructions = localStorage.getItem('puzzle_instructions_seen');
+if (hasSeenInstructions) {
+  instructionsOverlay.classList.add('hidden');
+}
+
+btnStart.addEventListener('click', () => {
+  instructionsOverlay.classList.add('hidden');
+  localStorage.setItem('puzzle_instructions_seen', 'true');
+});
+
+function shuffleArray(arr) {
+  const result = [...arr];
+  // Do fewer random swaps for easier puzzle (only 15 moves)
+  let empty = result.indexOf("");
+  
+  for(let i = 0; i < 15; i++) {
+    const moves = getValidMoves(empty);
+    const randomMove = moves[Math.floor(Math.random() * moves.length)];
+    // Swap
+    result[empty] = result[randomMove];
+    result[randomMove] = "";
+    empty = randomMove;
+  }
+  return result;
+}
+
+function getValidMoves(emptyIdx) {
+  const moves = [];
+  const row = Math.floor(emptyIdx / 3);
+  const col = emptyIdx % 3;
+  
+  if (row > 0) moves.push(emptyIdx - 3); // up
+  if (row < 2) moves.push(emptyIdx + 3); // down
+  if (col > 0) moves.push(emptyIdx - 1); // left
+  if (col < 2) moves.push(emptyIdx + 1); // right
+  
+  return moves;
+}
+
+function initLevel(levelIdx) {
+  if (levelIdx >= LEVELS.length) levelIdx = 0;
+  currentLevel = levelIdx;
+  
+  const level = LEVELS[currentLevel];
+  board = shuffleArray(level.pieces);
+  emptyIndex = board.indexOf("");
+  moveCount = 0;
+  solved = false;
+  
+  levelInfo.textContent = `Level ${currentLevel + 1} / ${LEVELS.length}`;
+  messageOverlay.classList.remove('show');
+  
+  renderPreviewBoard();
+  renderBoard();
+}
+
+function renderPreviewBoard() {
+  previewBoardEl.innerHTML = '';
+  const solution = LEVELS[currentLevel].pieces;
+  
+  solution.forEach((piece, idx) => {
+    const el = document.createElement('div');
+    el.className = 'preview-piece';
+    el.textContent = piece;
+    
+    if (piece === "") {
+      el.classList.add('empty');
+    }
+    
+    previewBoardEl.appendChild(el);
+  });
+}
+
+function renderBoard() {
+  boardEl.innerHTML = '';
+  const solution = LEVELS[currentLevel].pieces;
+  
+  board.forEach((piece, idx) => {
+    const el = document.createElement('div');
+    el.className = 'puzzle-piece';
+    el.textContent = piece;
+    el.dataset.index = idx;
+    
+    if (piece === "") {
+      el.classList.add('empty');
+    } else {
+      // Check if piece is in correct position
+      if (piece === solution[idx]) {
+        el.classList.add('correct');
+      }
+      el.addEventListener('click', () => handleClick(idx));
+      el.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleClick(idx);
+      }, { passive: false });
+    }
+    
+    boardEl.appendChild(el);
+  });
+}
+
+function handleClick(idx) {
+  if (solved) return;
+  
+  const validMoves = getValidMoves(emptyIndex);
+  if (!validMoves.includes(idx)) return;
+  
+  // Swap pieces
+  board[emptyIndex] = board[idx];
+  board[idx] = "";
+  emptyIndex = idx;
+  moveCount++;
+  
+  // Play click sound
+  playSound(400, 0.1);
+  
+  renderBoard();
+  checkWin();
+}
+
+function checkWin() {
+  const solution = LEVELS[currentLevel].pieces;
+  const isWin = board.every((piece, idx) => piece === solution[idx]);
+  
+  if (isWin) {
+    solved = true;
+    // Play victory sound
+    playSound(523, 0.15);
+    setTimeout(() => playSound(659, 0.15), 100);
+    setTimeout(() => playSound(784, 0.15), 200);
+    setTimeout(() => playSound(1047, 0.2), 300);
+    
+    messageText.textContent = `Solved in ${moveCount} moves!`;
+    setTimeout(() => {
+      messageOverlay.classList.add('show');
+    }, 500);
+  }
+}
+
+function playSound(freq, duration) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+
+// Event listeners
+btnBack.addEventListener('click', () => {
+  // Navigate back to dashboard
+  window.location.href = '../../index.html';
+});
+
+btnReset.addEventListener('click', () => {
+  initLevel(currentLevel);
+});
+
+btnNext.addEventListener('click', () => {
+  initLevel(currentLevel + 1);
+});
+
+// Lock to landscape
+function lockLandscape() {
+  if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+    window.screen.orientation.lock('landscape').catch(() => {});
+  }
+}
+document.addEventListener('DOMContentLoaded', lockLandscape);
+document.addEventListener('deviceready', lockLandscape);
+
+// Start game
+initLevel(0);
+  </script>
+</body>
+</html>
