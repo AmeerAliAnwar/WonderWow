@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Memory Match</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Landscape enforcement */
+    #portrait-warning {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      z-index: 99999;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      color: white;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #portrait-warning .rotate-icon {
+      font-size: 80px;
+      animation: rotatePhone 2s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes rotatePhone {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(90deg); }
+    }
+    #portrait-warning h2 { font-size: 24px; margin-bottom: 10px; }
+    #portrait-warning p { font-size: 16px; opacity: 0.9; }
+    
+    @media (orientation: portrait) {
+      #portrait-warning { display: flex !important; }
+      .container { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Portrait Warning -->
+  <div id="portrait-warning">
+    <div class="rotate-icon">📱</div>
+    <h2>Please Rotate Your Device</h2>
+    <p>This game works best in landscape mode!</p>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="title-section">
+        <h1 class="rainbow-text">🧠 Memory Match! 🧠</h1>
+        <p class="subtitle">Find all 6 matching pairs!</p>
+      </div>
+      <div class="info">
+        <div class="coins-display">
+          <span class="coin-icon-static"></span>
+          <span class="coins-label">Coins:</span>
+          <span id="coins" class="coins-value">0</span>
+        </div>
+        <button id="resetBtn" class="fun-button">🔄 New Game</button>
+      </div>
+    </header>
+
+    <main>
+      <div id="message" class="message">✨ Scratch cards & find matching pairs! ✨</div>
+      <div id="board" class="board"></div>
+      <div id="coinAnimation" class="coin-animation-container"></div>
+    </main>
+
+    <footer>
+      <div class="instructions">
+        <div class="instruction-item">🧠 Cards stay in place - remember them!</div>
+        <div class="instruction-item">⭐ Match each pair = 20 coins!</div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // Lock to landscape orientation
+    function lockLandscape() {
+      if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+        window.screen.orientation.lock('landscape').catch(function(e) {});
+      }
+      if (screen.lockOrientation) screen.lockOrientation('landscape');
+      else if (screen.mozLockOrientation) screen.mozLockOrientation('landscape');
+      else if (screen.msLockOrientation) screen.msLockOrientation('landscape');
+    }
+    document.addEventListener('DOMContentLoaded', lockLandscape);
+    document.addEventListener('deviceready', lockLandscape);
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
