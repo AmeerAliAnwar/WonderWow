@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="screen-orientation" content="landscape">
+    <title>Realm Guardians: Elemental Siege</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        html, body { 
+            margin: 0; 
+            padding: 0;
+            width: 100%; 
+            height: 100%; 
+            max-width: 100vw;
+            max-height: 100vh;
+            overflow: hidden !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #202020; 
+            color: white; 
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Segoe UI', sans-serif; 
+            touch-action: manipulation;
+        }
+        #root {
+            width: 100%;
+            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            overflow: hidden !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        canvas { display: block; image-rendering: pixelated; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .game-container { 
+            position: relative; 
+            width: 100%; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center; 
+            background: radial-gradient(circle, #334155 0%, #0f172a 100%); 
+            overflow: hidden;
+            padding: 5px;
+        }
+        .ui-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 100; }
+        .ui-interactive { pointer-events: auto; }
+        
+        .btn-tower { transition: all 0.15s ease; }
+        .btn-tower:hover { transform: scale(1.05); }
+        .btn-tower:active { transform: scale(0.95); }
+        .btn-tower.active { ring: 2px solid #fbbf24; transform: scale(1.05); box-shadow: 0 0 8px #fbbf24; }
+        
+        /* Side panels for controls */
+        .side-panel-left, .side-panel-right {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            pointer-events: auto;
+            z-index: 101;
+        }
+        .side-panel-left { left: 4px; }
+        .side-panel-right { right: 4px; }
+        
+        .compact-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            padding: 2px;
+            transition: all 0.15s ease;
+        }
+        .compact-btn:active { transform: scale(0.95); }
+        
+        /* Portrait warning overlay */
+        #portrait-warning {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #0f172a;
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        #portrait-warning .rotate-icon {
+            font-size: 80px;
+            animation: rotatePhone 2s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes rotatePhone {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+        #portrait-warning h2 { font-size: 24px; margin-bottom: 10px; }
+        #portrait-warning p { font-size: 16px; opacity: 0.9; }
+        
+        @media (orientation: portrait) {
+            #portrait-warning { display: flex !important; }
+            #root { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Portrait Warning -->
+    <div id="portrait-warning">
+        <div class="rotate-icon">📱</div>
+        <h2>Please Rotate Your Device</h2>
+        <p>This game works best in landscape mode!</p>
+    </div>
+
+    <div id="root"></div>
+
+    <script>
+        // Lock to landscape orientation
+        function lockLandscape() {
+            if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+                window.screen.orientation.lock('landscape').catch(function(e) {});
+            }
+            if (screen.lockOrientation) screen.lockOrientation('landscape');
+            else if (screen.mozLockOrientation) screen.mozLockOrientation('landscape');
+            else if (screen.msLockOrientation) screen.msLockOrientation('landscape');
+        }
+        document.addEventListener('DOMContentLoaded', lockLandscape);
+        document.addEventListener('deviceready', lockLandscape);
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+        // --- ICONS ---
+        const IconBase = ({ color="currentColor", size=24, children, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const Flame = (p) => <IconBase {...p}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.6-3.3.3.7.7 1.3 1.9 2.8z"/></IconBase>;
+        const Droplets = (p) => <IconBase {...p}><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.8-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.35"/></IconBase>;
+        const Leaf = (p) => <IconBase {...p}><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></IconBase>;
+        const Zap = (p) => <IconBase {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconBase>;
+        const Heart = (p) => <IconBase {...p}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></IconBase>;
+        const Skull = (p) => <IconBase {...p}><path d="M11 15h2"/><path d="M7 15h2"/><path d="M15 15h2"/><path d="M6 19h12a2 2 0 0 0 2-1.76V11a8 8 0 1 0-16 0v6.24A2 2 0 0 0 6 19z"/><path d="M9 11v-1"/><path d="M15 11v-1"/></IconBase>;
+        const Trophy = (p) => <IconBase {...p}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></IconBase>;
+        const ArrowLeft = (p) => <IconBase {...p}><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></IconBase>;
+
+
+        // --- CONSTANTS & CONFIG ---
+        const TILE_SIZE = 36; 
+        const GRID_W = 28;
+        const GRID_H = 18;
+        const FPS = 60;
+
+        const TOWERS = {
+            FIRE: { id: 'FIRE', name: 'Fire Blaster', cost: 80, range: 4, damage: 15, rate: 40, color: '#ef4444', desc: 'Goes BOOM! (Splash)', type: 'splash' },
+            WATER: { id: 'WATER', name: 'Ice Canon', cost: 100, range: 4.5, damage: 8, rate: 30, color: '#3b82f6', desc: 'Freezes Enemies', type: 'slow' },
+            NATURE: { id: 'NATURE', name: 'Leaf Shooter', cost: 120, range: 5, damage: 5, rate: 20, color: '#22c55e', desc: 'Poison Gas', type: 'poison' },
+            ARCANE: { id: 'ARCANE', name: 'Magic Laser', cost: 200, range: 7, damage: 60, rate: 60, color: '#a855f7', desc: 'Super Strong Shot', type: 'sniper' },
+        };
+
+        // Faster enemies!
+        const ENEMIES = {
+            CREEPER: { name: 'Blob', hp: 60, speed: 2.0, reward: 5, color: '#94a3b8' },   
+            CHARGER: { name: 'Speedy', hp: 45, speed: 4.0, reward: 8, color: '#fbbf24' },  
+            BRUTE: { name: 'Tank', hp: 300, speed: 1.2, reward: 20, color: '#ef4444' },    
+            BOSS: { name: 'Giant Boss', hp: 2000, speed: 0.8, reward: 100, color: '#7e22ce', radius: 14 },
+        };
+
+        const LEVELS = [
+            { id: 1, name: "Green Fields", guardian: "Aeron", color: "bg-green-600", mapType: "open", start: {x:1, y:9}, end: {x:26, y:9}, waves: 5 },
+            { id: 2, name: "Blue River", guardian: "Lyra", color: "bg-blue-600", mapType: "bridges", start: {x:1, y:5}, end: {x:26, y:12}, waves: 8 },
+            { id: 3, name: "Spooky Forest", guardian: "Oren", color: "bg-emerald-800", mapType: "forest", start: {x:1, y:1}, end: {x:26, y:16}, waves: 10 },
+            { id: 4, name: "Magic Castle", guardian: "Elyndra", color: "bg-purple-800", mapType: "citadel", start: {x:14, y:16}, end: {x:14, y:1}, waves: 12 },
+        ];
+
+        // --- ENGINE HELPERS ---
+
+        const findPath = (grid, start, end) => {
+            const queue = [[start]];
+            const visited = new Set([`${start.x},${start.y}`]);
+            const cols = grid.length;
+            const rows = grid[0].length;
+            const dirs = [{x:1, y:0}, {x:-1, y:0}, {x:0, y:1}, {x:0, y:-1}];
+
+            while(queue.length > 0) {
+                const path = queue.shift();
+                const curr = path[path.length - 1];
+
+                if(curr.x === end.x && curr.y === end.y) return path;
+
+                for(let d of dirs) {
+                    const next = {x: curr.x + d.x, y: curr.y + d.y};
+                    if(next.x >= 0 && next.x < cols && next.y >= 0 && next.y < rows) {
+                        const key = `${next.x},${next.y}`;
+                        // 0=Empty, 1=Tower, 2=Obstacle
+                        if(!visited.has(key) && grid[next.x][next.y] !== 1 && grid[next.x][next.y] !== 2) {
+                            visited.add(key);
+                            queue.push([...path, next]);
+                        }
+                    }
+                }
+            }
+            return null;
+        };
+
+        // --- COMPONENTS ---
+
+        const MainMenu = ({ onStart }) => (
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-50 text-center p-4 bg-slate-900/90 backdrop-blur-sm overflow-auto">
+                <div className="mb-4">
+                    <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-1 drop-shadow-lg" style={{filter: 'drop-shadow(0px 0px 10px rgba(255, 165, 0, 0.5))'}}>
+                        REALM GUARDIANS
+                    </h1>
+                    <h2 className="text-lg text-blue-300 font-bold">Defend the Base!</h2>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 max-w-md w-full">
+                    {LEVELS.map(level => (
+                        <button 
+                            key={level.id}
+                            onClick={() => onStart(level)}
+                            className={`relative overflow-hidden rounded-xl p-3 border-2 border-transparent hover:border-white transition-all transform hover:-translate-y-1 shadow-xl group ${level.color}`}
+                        >
+                            <div className="relative z-10 flex flex-col items-center">
+                                <span className="text-2xl mb-1">{level.id === 1 ? '🌲' : level.id === 2 ? '💧' : level.id === 3 ? '👻' : '🏰'}</span>
+                                <h3 className="text-sm font-black text-white">{level.name}</h3>
+                                <div className="mt-1 bg-black/30 px-2 py-0.5 rounded-full text-xs font-bold text-white/90">
+                                    Play
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+
+                <div className="mt-4 bg-white/10 p-3 rounded-xl max-w-md backdrop-blur border border-white/20">
+                    <h3 className="text-sm font-bold text-yellow-300 mb-2">How to Play</h3>
+                    <div className="flex justify-around text-center gap-2">
+                        <div className="flex-1">
+                            <div className="text-xl">🏰</div>
+                            <p className="text-xs font-bold">Build Towers</p>
+                        </div>
+                        <div className="flex-1">
+                            <div className="text-xl">🆘</div>
+                            <p className="text-xs font-bold">Use Lifelines</p>
+                        </div>
+                        <div className="flex-1">
+                            <div className="text-xl">👾</div>
+                            <p className="text-xs font-bold">Stop Monsters</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const GameUI = ({ gameState, gold, lives, wave, maxWaves, selectedTower, onSelectTower, spells, onCastSpell, nextWaveTime, levelName, onBack }) => {
+            return (
+                <div className="ui-overlay pointer-events-none">
+                    {/* Top Bar - Compact */}
+                    <div className="absolute top-2 left-2 right-2 flex justify-between items-start pointer-events-none">
+                        <div className="flex gap-2 pointer-events-auto">
+                            <button onClick={onBack} className="bg-slate-800/90 text-white p-2 rounded-lg active:scale-95 transition-all">
+                                <ArrowLeft size={20} />
+                            </button>
+                            <div className="bg-slate-800/90 px-3 py-1 rounded-lg flex flex-col justify-center">
+                                <span className="text-[10px] text-slate-400 font-bold uppercase">{levelName}</span>
+                                <span className="text-sm font-black text-white">Wave {wave}/{maxWaves}</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-800/90 px-3 py-1 rounded-lg flex gap-4 items-center pointer-events-auto">
+                            <div className="flex items-center gap-1">
+                                <span className="text-lg">💰</span>
+                                <span className="text-lg font-black text-yellow-400">{gold}</span>
+                            </div>
+                            <div className="w-px h-6 bg-slate-600"></div>
+                            <div className="flex items-center gap-1">
+                                <span className="text-lg">❤️</span>
+                                <span className="text-lg font-black text-red-400">{lives}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Left Side - Tower Buttons */}
+                    <div className="side-panel-left">
+                        {Object.values(TOWERS).map(tower => (
+                            <button
+                                key={tower.id}
+                                onClick={() => onSelectTower(tower.id === selectedTower ? null : tower.id)}
+                                className={`compact-btn ${selectedTower === tower.id ? 'bg-slate-500 ring-2 ring-yellow-400' : 'bg-slate-700/90 hover:bg-slate-600'}`}
+                            >
+                                <div style={{color: tower.color}}>
+                                    {tower.id === 'FIRE' && <Flame size={18} />}
+                                    {tower.id === 'WATER' && <Droplets size={18} />}
+                                    {tower.id === 'NATURE' && <Leaf size={18} />}
+                                    {tower.id === 'ARCANE' && <Zap size={18} />}
+                                </div>
+                                <span className="text-yellow-300 font-bold">{tower.cost}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Right Side - Spell Buttons */}
+                    <div className="side-panel-right">
+                        {spells.map((spell, idx) => (
+                            <button
+                                key={idx}
+                                disabled={spell.cooldown > 0 || gold < spell.cost}
+                                onClick={() => onCastSpell(idx)}
+                                className={`compact-btn relative overflow-hidden
+                                    ${spell.cooldown > 0 || gold < spell.cost
+                                        ? 'bg-slate-700/90 opacity-50 cursor-not-allowed' 
+                                        : 'bg-purple-600/90 hover:bg-purple-500'
+                                    }`}
+                            >
+                                <span className="text-lg">{spell.icon}</span>
+                                <span className="text-yellow-300 font-bold">{spell.cost}</span>
+                                {spell.cooldown > 0 && <span className="absolute inset-0 bg-black/70 flex items-center justify-center font-black text-white text-sm">{Math.ceil(spell.cooldown)}</span>}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Modals */}
+                    {(gameState === 'GAMEOVER' || gameState === 'VICTORY') && (
+                        <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50 pointer-events-auto">
+                            <div className="bg-slate-800 p-10 rounded-3xl border-4 border-slate-600 text-center shadow-2xl animate-bounce">
+                                <div className="text-6xl mb-4">{gameState === 'VICTORY' ? '🏆' : '💀'}</div>
+                                <h2 className="text-5xl font-black mb-4 text-white">{gameState === 'VICTORY' ? 'YOU WON!' : 'GAME OVER'}</h2>
+                                <button 
+                                    onClick={() => window.location.reload()}
+                                    className="px-10 py-4 bg-yellow-400 text-black font-black text-xl rounded-full hover:scale-105 transition-transform shadow-lg hover:shadow-yellow-400/50"
+                                >
+                                    PLAY AGAIN
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const Game = () => {
+            const [gameState, setGameState] = useState('MENU');
+            const canvasRef = useRef(null);
+            
+            const stateRef = useRef({
+                level: null,
+                grid: [],
+                enemies: [],
+                towers: [],
+                projectiles: [],
+                particles: [],
+                texts: [],
+                gold: 450,
+                lives: 20,
+                wave: 0,
+                waveActive: false,
+                waveTimer: 0,
+                enemySpawnQueue: [],
+                spawnTimer: 0,
+                path: [],
+                _ui_acc: 0,
+                spells: [
+                    { name: 'Meteor', cost: 150, cooldown: 0, maxCooldown: 15, icon: <Flame color="white" />, active: false },
+                    { name: 'Freeze', cost: 100, cooldown: 0, maxCooldown: 10, icon: <Zap color="white" />, active: false },
+                    { name: 'Heal', cost: 200, cooldown: 0, maxCooldown: 30, icon: <Heart color="white" />, active: false },
+                ]
+            });
+
+            const [uiState, setUiState] = useState({ gold: 0, lives: 0, wave: 0, nextWaveTime: 0 });
+            const [selectedTower, setSelectedTower] = useState(null);
+
+            // --- INITIALIZATION ---
+
+            const initGrid = (lvl) => {
+                const newGrid = Array(GRID_W).fill().map(() => Array(GRID_H).fill(0));
+                
+                // Simplified Map Generation
+                if (lvl.mapType === 'bridges') {
+                    for(let x=0; x<GRID_W; x++) for(let y=6; y<12; y++) newGrid[x][y] = 2;
+                    for(let y=6; y<12; y++) { newGrid[8][y] = 0; newGrid[20][y] = 0; }
+                } 
+                else if (lvl.mapType === 'forest') {
+                    // Spooky Forest
+                    for(let x=4; x<GRID_W-4; x+=4) {
+                        for(let y=3; y<GRID_H-3; y+=4) {
+                             const offX = Math.random() > 0.5 ? 1 : 0;
+                             const offY = Math.random() > 0.5 ? 1 : 0;
+                             newGrid[x+offX][y+offY] = 2;
+                             newGrid[x+offX+1][y+offY] = 2;
+                             newGrid[x+offX][y+offY+1] = 2;
+                             newGrid[x+offX+1][y+offY+1] = 2;
+                        }
+                    }
+                    for(let x=0; x<4; x++) for(let y=0; y<4; y++) newGrid[x][y] = 0;
+                    for(let x=GRID_W-4; x<GRID_W; x++) for(let y=GRID_H-4; y<GRID_H; y++) newGrid[x][y] = 0;
+                } 
+                else if (lvl.mapType === 'citadel') {
+                    // Magic Castle
+                    for(let y=0; y<GRID_H; y++) { newGrid[3][y] = 2; newGrid[GRID_W-4][y] = 2; }
+                    for(let y=4; y<GRID_H-4; y+=4) {
+                        newGrid[10][y] = 2; newGrid[11][y] = 2; 
+                        newGrid[17][y] = 2; newGrid[18][y] = 2; 
+                    }
+                    newGrid[3][8] = 0; newGrid[3][9] = 0;
+                    newGrid[GRID_W-4][8] = 0; newGrid[GRID_W-4][9] = 0;
+                }
+
+                newGrid[lvl.start.x][lvl.start.y] = 0;
+                newGrid[lvl.end.x][lvl.end.y] = 0;
+                return newGrid;
+            };
+
+            const startGame = (selectedLevel) => {
+                const grid = initGrid(selectedLevel);
+                const path = findPath(grid, selectedLevel.start, selectedLevel.end);
+
+                stateRef.current = {
+                    level: selectedLevel,
+                    grid,
+                    enemies: [],
+                    towers: [],
+                    projectiles: [],
+                    particles: [],
+                    texts: [],
+                    gold: 450,
+                    lives: 20,
+                    wave: 0,
+                    waveActive: false,
+                    waveTimer: 3,
+                    enemySpawnQueue: [],
+                    spawnTimer: 0,
+                    path,
+                    _ui_acc: 0,
+                    spells: stateRef.current.spells.map(s => ({...s, cooldown: 0}))
+                };
+                setGameState('PLAYING');
+            };
+
+            // --- GAME LOOP ---
+            
+            useEffect(() => {
+                if (gameState === 'PLAYING') {
+                    let animationFrameId;
+                    const loop = () => {
+                        const state = stateRef.current;
+                        const canvas = canvasRef.current;
+                        if (canvas && state.level) {
+                            const ctx = canvas.getContext('2d');
+                            const dt = 1/FPS;
+
+                            // Update
+                            if (state.waveActive) {
+                                if (state.enemySpawnQueue.length > 0) {
+                                    state.spawnTimer -= dt;
+                                    if (state.spawnTimer <= 0) {
+                                        spawnEnemy(state, state.enemySpawnQueue.shift());
+                                        state.spawnTimer = 0.8; 
+                                    }
+                                } else if (state.enemies.length === 0) {
+                                    state.waveActive = false;
+                                    state.waveTimer = 5;
+                                    state.gold += 50 + (state.wave * 10);
+                                    spawnFloatingText(state, state.level.end.x*TILE_SIZE, state.level.end.y*TILE_SIZE, `Wave Clear! +${50 + (state.wave * 10)}g`, '#fbbf24');
+                                }
+                            } else {
+                                if (state.wave < state.level.waves) {
+                                    state.waveTimer -= dt;
+                                    if (state.waveTimer <= 0) startNextWave(state);
+                                }
+                            }
+
+                            updateEnemies(state, dt);
+                            updateTowers(state, dt);
+                            updateProjectiles(state, dt);
+                            updateParticles(state, dt);
+                            updateFloatingTexts(state, dt);
+                            state.spells.forEach(s => { if(s.cooldown > 0) s.cooldown -= dt; });
+
+                            // Render
+                            render(ctx, state);
+
+                            // Sync UI with fixed interval
+                            state._ui_acc = (state._ui_acc || 0) + dt;
+                            if (state._ui_acc >= 0.2) {
+                                state._ui_acc = 0;
+                                setUiState({ gold: state.gold, lives: state.lives, wave: state.wave, nextWaveTime: state.waveActive ? 0 : state.waveTimer });
+                            }
+
+                            if (state.lives <= 0) setGameState('GAMEOVER');
+                            if (state.wave >= state.level.waves && state.enemies.length === 0 && !state.waveActive) setGameState('VICTORY');
+                        }
+                        animationFrameId = requestAnimationFrame(loop);
+                    };
+                    animationFrameId = requestAnimationFrame(loop);
+                    return () => cancelAnimationFrame(animationFrameId);
+                }
+            }, [gameState]);
+
+            const startNextWave = (state) => {
+                state.wave++;
+                state.waveActive = true;
+                const count = 5 + Math.floor(state.wave * 2); 
+                
+                for(let i=0; i<count; i++) {
+                    let type = 'CREEPER';
+                    const rand = Math.random();
+                    if (state.wave % 5 === 0 && i === count - 1) {
+                        type = 'BOSS'; 
+                    } else if (state.wave > 2) {
+                        if (rand < 0.3) type = 'CREEPER';
+                        else if (rand < 0.6) type = 'CHARGER';
+                        else type = 'BRUTE';
+                    } else {
+                        type = i % 2 === 0 ? 'CREEPER' : 'CHARGER';
+                    }
+                    state.enemySpawnQueue.push(type);
+                }
+            };
+
+            const spawnEnemy = (state, typeKey) => {
+                const t = ENEMIES[typeKey];
+                state.enemies.push({
+                    ...t,
+                    x: state.level.start.x * TILE_SIZE + TILE_SIZE/2,
+                    y: state.level.start.y * TILE_SIZE + TILE_SIZE/2,
+                    gridX: state.level.start.x, gridY: state.level.start.y,
+                    pathIndex: 0, frozen: 0, poisoned: 0, slowed: 0,
+                    maxHp: t.hp + (state.wave * 25), currentHp: t.hp + (state.wave * 25),
+                    id: Math.random(),
+                    wobble: Math.random() * Math.PI * 2 
+                });
+            };
+
+            const updateEnemies = (state, dt) => {
+                if(!state.path || state.path.length === 0) return;
+                for (let i = state.enemies.length - 1; i >= 0; i--) {
+                    const e = state.enemies[i];
+                    e.wobble += dt * 15; 
+                    
+                    let speedMod = 1;
+                    if (e.frozen > 0) { e.frozen -= dt; speedMod = 0; }
+                    if (e.slowed > 0) { e.slowed -= dt; speedMod = 0.6; }
+                    if (e.poisoned > 0) { e.poisoned -= dt; e.currentHp -= (5 * dt); spawnParticle(state, e.x, e.y, '#22c55e', 1); }
+                    
+                    if (speedMod > 0) {
+                        const targetNode = state.path[e.pathIndex + 1];
+                        if (!targetNode) { state.lives -= 1; state.enemies.splice(i, 1); continue; }
+                        
+                        const tx = targetNode.x * TILE_SIZE + TILE_SIZE/2;
+                        const ty = targetNode.y * TILE_SIZE + TILE_SIZE/2;
+                        const dx = tx - e.x, dy = ty - e.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        const moveStep = e.speed * TILE_SIZE * dt * speedMod;
+
+                        if (dist <= moveStep) { e.x = tx; e.y = ty; e.gridX = targetNode.x; e.gridY = targetNode.y; e.pathIndex++; }
+                        else { e.x += (dx/dist)*moveStep; e.y += (dy/dist)*moveStep; }
+                    }
+                    if (e.currentHp <= 0) { 
+                        state.gold += e.reward; 
+                        spawnParticle(state, e.x, e.y, '#fbbf24', 8); 
+                        spawnFloatingText(state, e.x, e.y, `+${e.reward}`, '#fbbf24');
+                        state.enemies.splice(i, 1); 
+                    }
+                }
+            };
+
+            const updateTowers = (state, dt) => {
+                state.towers.forEach(t => {
+                    t.cooldown -= dt;
+                    if (t.cooldown <= 0) {
+                        let target = null, minDist = Infinity;
+                        for(const e of state.enemies) {
+                            const d = Math.sqrt((e.x - t.x)**2 + (e.y - t.y)**2);
+                            if (d <= t.range * TILE_SIZE && d < minDist) { minDist = d; target = e; }
+                        }
+                        if (target) { fireProjectile(state, t, target); t.cooldown = 60 / t.rate; }
+                    }
+                });
+            };
+
+            const fireProjectile = (state, tower, target) => {
+                state.projectiles.push({
+                    x: tower.x, y: tower.y, targetId: target.id, targetX: target.x, targetY: target.y,
+                    damage: tower.damage, type: tower.type, speed: 12 * TILE_SIZE, color: tower.color
+                });
+            };
+
+            const updateProjectiles = (state, dt) => {
+                for (let i = state.projectiles.length - 1; i >= 0; i--) {
+                    const p = state.projectiles[i];
+                    const target = state.enemies.find(e => e.id === p.targetId);
+                    if (target) { p.targetX = target.x; p.targetY = target.y; }
+                    else if (p.type === 'sniper') { state.projectiles.splice(i, 1); continue; }
+
+                    const dx = p.targetX - p.x, dy = p.targetY - p.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const move = p.speed * dt;
+
+                    if (dist <= move) { hitEnemy(state, p, target); state.projectiles.splice(i, 1); }
+                    else { p.x += (dx/dist)*move; p.y += (dy/dist)*move; }
+                }
+            };
+
+            const hitEnemy = (state, proj, directTarget) => {
+                if (proj.type === 'splash') {
+                    spawnParticle(state, proj.targetX, proj.targetY, '#ef4444', 10);
+                    state.enemies.forEach(e => { if (Math.sqrt((e.x - proj.targetX)**2 + (e.y - proj.targetY)**2) < 2.5 * TILE_SIZE) e.currentHp -= proj.damage; });
+                } else if (directTarget) {
+                    directTarget.currentHp -= proj.damage;
+                    spawnParticle(state, directTarget.x, directTarget.y, proj.color, 5);
+                    if (proj.type === 'slow') directTarget.slowed = 2.0;
+                    if (proj.type === 'poison') directTarget.poisoned = 3.0;
+                }
+            };
+
+            const updateParticles = (state, dt) => {
+                for(let i=state.particles.length-1; i>=0; i--) {
+                    const p = state.particles[i];
+                    p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
+                    if (p.life <= 0) state.particles.splice(i, 1);
+                }
+            };
+
+            const spawnParticle = (state, x, y, color, count) => {
+                for(let i=0; i<count; i++) state.particles.push({ x, y, vx: (Math.random()-0.5)*150, vy: (Math.random()-0.5)*150, life: 0.4, color });
+            };
+
+            const spawnFloatingText = (state, x, y, text, color) => {
+                state.texts.push({ x, y, text, color, life: 1.0, vy: -30 });
+            };
+
+            const updateFloatingTexts = (state, dt) => {
+                for(let i=state.texts.length-1; i>=0; i--) {
+                    const t = state.texts[i];
+                    t.life -= dt; 
+                    t.y += t.vy * dt;
+                    if (t.life <= 0) state.texts.splice(i, 1);
+                }
+            };
+
+            const handleCanvasClick = (e) => {
+                if (!stateRef.current.level || gameState !== 'PLAYING') return;
+                const rect = canvasRef.current.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / TILE_SIZE);
+                const y = Math.floor((e.clientY - rect.top) / TILE_SIZE);
+                if (x < 0 || x >= GRID_W || y < 0 || y >= GRID_H) return;
+
+                if (selectedTower) {
+                    const towerData = TOWERS[selectedTower];
+                    if (stateRef.current.gold < towerData.cost) return;
+                    if (stateRef.current.grid[x][y] !== 0) return;
+
+                    const tempGrid = stateRef.current.grid.map(row => [...row]);
+                    tempGrid[x][y] = 1;
+                    const newPath = findPath(tempGrid, stateRef.current.level.start, stateRef.current.level.end);
+                    if (!newPath) return; // Blocked
+
+                    stateRef.current.gold -= towerData.cost;
+                    stateRef.current.grid[x][y] = 1;
+                    stateRef.current.path = newPath;
+                    stateRef.current.towers.push({ ...towerData, x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, cooldown: 0 });
+                    
+                    stateRef.current.enemies.forEach(e => {
+                        let minD = Infinity, bestIdx = 0;
+                        for(let i=0; i<newPath.length; i++) {
+                            const d = Math.abs(newPath[i].x - e.gridX) + Math.abs(newPath[i].y - e.gridY);
+                            if (d < minD) { minD = d; bestIdx = i; }
+                        }
+                        e.pathIndex = bestIdx;
+                    });
+                }
+            };
+            
+            const handleCastSpell = (idx) => {
+                const state = stateRef.current;
+                const spell = state.spells[idx];
+                
+                // COST CHECK
+                if (spell.cooldown > 0 || state.gold < spell.cost) return;
+                
+                state.gold -= spell.cost; // DEDUCT GOLD
+                spell.cooldown = spell.maxCooldown;
+                
+                if(spell.name==='Meteor') state.enemies.forEach(e => {e.currentHp -= 100; spawnParticle(state,e.x,e.y,'#f87171',10)});
+                if(spell.name==='Freeze') state.enemies.forEach(e => e.frozen = 5.0);
+                if(spell.name==='Heal') state.lives = Math.min(state.lives+5, 20);
+                
+                spawnFloatingText(state, GRID_W*TILE_SIZE/2, GRID_H*TILE_SIZE/2, `${spell.name} Used! -${spell.cost}g`, 'white');
+            };
+
+            // --- RENDERER (Kid Friendly) ---
+            const render = (ctx, state) => {
+                // Background (Chequered Grass)
+                for(let x=0; x<GRID_W; x++) {
+                    for(let y=0; y<GRID_H; y++) {
+                        const cell = state.grid[x][y];
+                        const px = x * TILE_SIZE, py = y * TILE_SIZE;
+                        
+                        if (cell === 2) { 
+                            ctx.fillStyle = state.level.mapType === 'bridges' ? '#3b82f6' : '#1e293b'; 
+                            ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                            ctx.beginPath(); ctx.arc(px+10, py+10, 5, 0, Math.PI*2); ctx.fill();
+                        } else {
+                            ctx.fillStyle = (x + y) % 2 === 0 ? '#4ade80' : '#22c55e';
+                            ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
+                }
+
+                const pulse = Math.sin(Date.now()/200) * 3;
+                ctx.fillStyle = '#ef4444'; 
+                ctx.beginPath(); ctx.arc(state.level.end.x*TILE_SIZE + TILE_SIZE/2, state.level.end.y*TILE_SIZE + TILE_SIZE/2, TILE_SIZE/2 + pulse, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'white'; ctx.font = '20px Arial'; ctx.fillText('❌', state.level.end.x*TILE_SIZE+4, state.level.end.y*TILE_SIZE+26);
+
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath(); ctx.arc(state.level.start.x*TILE_SIZE + TILE_SIZE/2, state.level.start.y*TILE_SIZE + TILE_SIZE/2, TILE_SIZE/2 + pulse, 0, Math.PI*2); ctx.fill();
+                ctx.fillText('🏁', state.level.start.x*TILE_SIZE+4, state.level.start.y*TILE_SIZE+26);
+
+                state.towers.forEach(t => {
+                    const cx = t.x, cy = t.y;
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx, cy+10, 14, 6, 0, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(cx-12, cy-10, 24, 20);
+                    ctx.fillStyle = t.color;
+                    ctx.beginPath(); ctx.arc(cx, cy-8, 12, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(cx-4, cy-12, 4, 0, Math.PI*2); ctx.fill();
+                });
+
+                // Enemies (Animated Little Monsters!)
+                state.enemies.forEach(e => {
+                    const cx = e.x, cy = e.y;
+                    const size = e.radius || 12;
+                    const animOffset = Math.sin(e.wobble) * 3; 
+                    
+                    ctx.strokeStyle = e.color;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - 5, cy);
+                    ctx.lineTo(cx - 5, cy + size + animOffset);
+                    ctx.moveTo(cx + 5, cy);
+                    ctx.lineTo(cx + 5, cy + size - animOffset);
+                    ctx.stroke();
+
+                    ctx.fillStyle = e.frozen > 0 ? '#93c5fd' : e.color;
+                    ctx.beginPath(); 
+                    
+                    if (e.name === 'Blob') { 
+                        ctx.ellipse(cx, cy, size, size - Math.abs(animOffset/2), 0, 0, Math.PI*2); 
+                    } 
+                    else if (e.name === 'Speedy') { 
+                        ctx.moveTo(cx, cy - size - 5);
+                        ctx.lineTo(cx + size, cy + size);
+                        ctx.lineTo(cx - size, cy + size);
+                        ctx.closePath();
+                    }
+                    else if (e.name === 'Tank') {
+                        ctx.rect(cx-size, cy-size, size*2, size*2); 
+                        ctx.moveTo(cx-size, cy-size); ctx.lineTo(cx-size-4, cy-size-6);
+                        ctx.moveTo(cx+size, cy-size); ctx.lineTo(cx+size+4, cy-size-6);
+                        ctx.stroke();
+                    }
+                    else {
+                        ctx.arc(cx, cy, size, 0, Math.PI*2);
+                    }
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath(); ctx.arc(cx-4, cy-2, 4, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx+4, cy-2, 4, 0, Math.PI*2); ctx.fill();
+                    
+                    const pupilX = Math.cos(e.wobble/2) * 1;
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath(); ctx.arc(cx-4 + pupilX, cy-2, 1.5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx+4 + pupilX, cy-2, 1.5, 0, Math.PI*2); ctx.fill();
+                    
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(cx-7, cy-6); ctx.lineTo(cx-1, cy-3); 
+                    ctx.moveTo(cx+7, cy-6); ctx.lineTo(cx+1, cy-3); 
+                    ctx.stroke();
+
+                    const pct = e.currentHp / e.maxHp;
+                    ctx.fillStyle = 'black'; ctx.fillRect(cx-12, cy-size-10, 24, 6);
+                    ctx.fillStyle = '#22c55e'; ctx.fillRect(cx-12, cy-size-10, 24*pct, 6);
+                });
+
+                state.projectiles.forEach(p => {
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+                });
+
+                state.particles.forEach(p => {
+                    ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                });
+
+                // Render Floating Text
+                ctx.font = 'bold 16px "Comic Sans MS"';
+                state.texts.forEach(t => {
+                    ctx.fillStyle = t.color;
+                    ctx.globalAlpha = t.life;
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 3;
+                    ctx.strokeText(t.text, t.x, t.y);
+                    ctx.fillText(t.text, t.x, t.y);
+                    ctx.globalAlpha = 1.0;
+                });
+            };
+
+            return (
+                <div className="game-container">
+                    {gameState === 'MENU' && <MainMenu onStart={startGame} />}
+                    {(gameState === 'PLAYING' || gameState === 'GAMEOVER' || gameState === 'VICTORY') && (
+                        <>
+                            <canvas ref={canvasRef} width={GRID_W * TILE_SIZE} height={GRID_H * TILE_SIZE} onClick={handleCanvasClick} />
+                            <GameUI 
+                                gameState={gameState} gold={uiState.gold} lives={uiState.lives} wave={uiState.wave} 
+                                maxWaves={stateRef.current.level?.waves || 0} selectedTower={selectedTower} 
+                                onSelectTower={setSelectedTower} spells={stateRef.current.spells} onCastSpell={handleCastSpell} 
+                                nextWaveTime={uiState.nextWaveTime} levelName={stateRef.current.level?.name} onBack={() => setGameState('MENU')}
+                            />
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Game />);
+    </script>
+</body>
+</html>
