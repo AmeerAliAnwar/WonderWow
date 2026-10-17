@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Robust wood background SVG: stronger fills and visible grain so it doesn't appear empty -->
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f6e7d0" />
+      <stop offset="100%" stop-color="#e1c39d" />
+    </linearGradient>
+    <!-- subtle darker stripes for wood grain -->
+    <linearGradient id="stripe" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="50%" stop-color="#000000" stop-opacity="0.04" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- base rounded rectangle to ensure visible background in all viewers -->
+  <rect x="0" y="0" width="800" height="600" rx="18" ry="18" fill="url(#g)" />
+
+  <!-- a few bold curved bands to read as wood planks -->
+  <g fill="none" stroke="#b07a3b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.45">
+    <path d="M-40 120 C 120 80 360 80 860 120" />
+    <path d="M-40 220 C 120 180 360 180 860 220" />
+    <path d="M-40 320 C 120 280 360 280 860 320" />
+    <path d="M-40 420 C 120 380 360 380 860 420" />
+  </g>
+
+  <!-- fine grain strokes across the board for texture -->
+  <g stroke="#8c6b44" stroke-width="1.6" opacity="0.12" fill="none">
+    <path d="M0 70 C 80 50 200 50 300 70 S520 90 800 70" />
+    <path d="M0 140 C 90 120 210 120 320 140 S540 160 800 140" />
+    <path d="M0 210 C 80 190 220 190 340 210 S560 230 800 210" />
+    <path d="M0 280 C 70 260 230 260 360 280 S580 300 800 280" />
+    <path d="M0 350 C 60 330 240 330 380 350 S600 370 800 350" />
+  </g>
+
+  <!-- soft horizontal stripe overlay to add subtle shading -->
+  <rect x="0" y="0" width="800" height="600" fill="url(#stripe)" opacity="0.08" />
+
+</svg>
