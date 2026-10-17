@@ -1,0 +1,14 @@
+# Dependencies and Cordova generated directories
+node_modules/
+platforms/
+plugins/
+.cordova/
+
+# Generated web assets (created by "cordova prepare")
+www/cordova.js
+www/cordova_plugins.js
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
