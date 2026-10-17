@@ -1,0 +1,405 @@
+/* ========================================
+   WONDERWOW - DASHBOARD STYLES
+   ======================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html {
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    font-family: 'Nunito', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    min-height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* App Container */
+.app-container {
+    width: 100%;
+    min-height: 100%;
+    position: relative;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* Screens */
+.screen {
+    display: none;
+    min-height: 100%;
+    width: 100%;
+}
+
+.screen.active {
+    display: block;
+}
+
+/* Dashboard Screen - Scrollable */
+#dashboard {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 20px;
+}
+
+/* ========================================
+   FLOATING DECORATIONS
+   ======================================== */
+
+.floating-decoration {
+    position: fixed;
+    font-size: 2rem;
+    opacity: 0.6;
+    z-index: 0;
+    pointer-events: none;
+    animation: float 6s ease-in-out infinite;
+}
+
+.floating-decoration.star { animation-delay: 0s; }
+.floating-decoration.heart { animation-delay: 1s; }
+.floating-decoration.cloud { animation-delay: 2s; font-size: 3rem; }
+.floating-decoration.sparkle { animation-delay: 3s; }
+.floating-decoration.rainbow { animation-delay: 4s; }
+.floating-decoration.balloon { animation-delay: 5s; }
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+/* ========================================
+   DASHBOARD HEADER
+   ======================================== */
+
+.dashboard-header {
+    text-align: center;
+    padding: 30px 20px 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.mascot {
+    font-size: 4rem;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+.app-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    color: #FFD93D;
+    text-shadow: 
+        3px 3px 0 #FF6B6B,
+        6px 6px 0 rgba(0,0,0,0.2);
+    margin: 10px 0;
+    animation: titlePop 0.8s ease-out;
+}
+
+@keyframes titlePop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.welcome-text {
+    font-size: clamp(1rem, 4vw, 1.3rem);
+    color: white;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+/* ========================================
+   GAMES GRID
+   ======================================== */
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* ========================================
+   GAME CARDS
+   ======================================== */
+
+.game-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f0f0f0 100%);
+    border-radius: 25px;
+    padding: 25px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 
+        0 10px 30px rgba(0,0,0,0.2),
+        inset 0 -5px 0 rgba(0,0,0,0.1);
+    border: 4px solid rgba(255,255,255,0.5);
+}
+
+.game-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 
+        0 20px 40px rgba(0,0,0,0.3),
+        inset 0 -5px 0 rgba(0,0,0,0.1);
+}
+
+.game-card:active {
+    transform: translateY(-5px) scale(0.98);
+}
+
+.card-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, transparent 100%);
+    border-radius: 25px 25px 0 0;
+    pointer-events: none;
+}
+
+.game-icon {
+    font-size: 4rem;
+    text-align: center;
+    margin-bottom: 15px;
+    animation: iconWiggle 3s ease-in-out infinite;
+}
+
+@keyframes iconWiggle {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+}
+
+.game-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(1.3rem, 4vw, 1.6rem);
+    color: #333;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.game-desc {
+    font-size: clamp(0.9rem, 3vw, 1rem);
+    color: #666;
+    text-align: center;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.play-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+    color: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.8rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    box-shadow: 0 3px 10px rgba(255,107,107,0.4);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Card Colors */
+.game-card:nth-child(1) { border-bottom: 6px solid #FF6B6B; }
+.game-card:nth-child(2) { border-bottom: 6px solid #6BCF7F; }
+.game-card:nth-child(3) { border-bottom: 6px solid #FF69B4; }
+.game-card:nth-child(4) { border-bottom: 6px solid #4169E1; }
+.game-card:nth-child(5) { border-bottom: 6px solid #FFD700; }
+.game-card:nth-child(6) { border-bottom: 6px solid #9B59B6; }
+
+/* ========================================
+   DASHBOARD FOOTER
+   ======================================== */
+
+.dashboard-footer {
+    text-align: center;
+    padding: 30px 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.footer-mascots {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.footer-mascots span {
+    display: inline-block;
+    margin: 0 10px;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+.footer-mascots span:nth-child(2) { animation-delay: 0.3s; }
+.footer-mascots span:nth-child(3) { animation-delay: 0.6s; }
+
+.dashboard-footer p {
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+/* ========================================
+   GAME CONTAINER
+   ======================================== */
+
+#game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 100;
+    overflow: hidden;
+}
+
+#game-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* Back button removed - using Android back button for navigation */
+
+/* ========================================
+   LOADING SCREEN
+   ======================================== */
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 300;
+}
+
+.loading-overlay.active {
+    display: flex;
+}
+
+.loading-content {
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(255,255,255,0.3);
+    border-top-color: #FFD93D;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-text {
+    color: white;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.loading-mascot {
+    font-size: 3rem;
+    animation: bounce 1s ease-in-out infinite;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 600px) {
+    .games-grid {
+        grid-template-columns: 1fr;
+        padding: 15px;
+        gap: 15px;
+    }
+
+    .game-card {
+        padding: 20px;
+    }
+
+    .dashboard-header {
+        padding: 20px 15px 15px;
+    }
+
+    .mascot {
+        font-size: 3rem;
+    }
+
+    .floating-decoration {
+        font-size: 1.5rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .games-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .games-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Safe area insets for notched phones */
+@supports (padding: max(0px)) {
+    .dashboard-header {
+        padding-top: max(30px, env(safe-area-inset-top));
+    }
+    
+    .dashboard-footer {
+        padding-bottom: max(30px, env(safe-area-inset-bottom));
+    }
+    
+    .games-grid {
+        padding-left: max(20px, env(safe-area-inset-left));
+        padding-right: max(20px, env(safe-area-inset-right));
+    }
+}
