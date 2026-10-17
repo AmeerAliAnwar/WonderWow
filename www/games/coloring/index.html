@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="screen-orientation" content="landscape">
+    <title>Kids Coloring World</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        body {
+            font-family: 'Fredoka One', cursive;
+            background-color: #5D4037;
+            background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 2px, transparent 2px, transparent 10px);
+            cursor: none;
+            touch-action: manipulation;
+            display: flex;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        /* Portrait warning overlay */
+        #portrait-warning {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #5D4037;
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: 'Fredoka One', cursive;
+            text-align: center;
+            padding: 20px;
+        }
+        #portrait-warning .rotate-icon {
+            font-size: 80px;
+            animation: rotatePhone 2s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes rotatePhone {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+        #portrait-warning h2 { font-size: 24px; margin-bottom: 10px; }
+        #portrait-warning p { font-size: 16px; opacity: 0.9; }
+
+        @media (orientation: portrait) {
+            #portrait-warning { display: flex !important; }
+            .main-area, .crayon-tray, .crayon-tray-left, #cursor-hand { display: none !important; }
+        }
+
+        #cursor-hand {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            width: 100px; 
+            height: 100px;
+            transform-origin: 0% 100%; 
+            transition: transform 0.05s linear;
+            filter: drop-shadow(3px 6px 6px rgba(0,0,0,0.3));
+        }
+
+        .coloring-action {
+            animation: scribble 0.3s ease-in-out infinite;
+        }
+
+        @keyframes scribble {
+            0% { transform: rotate(0deg) translate(0, 0); }
+            25% { transform: rotate(-10deg) translate(-2px, 2px); }
+            50% { transform: rotate(0deg) translate(0, 0); }
+            75% { transform: rotate(10deg) translate(2px, -2px); }
+            100% { transform: rotate(0deg) translate(0, 0); }
+        }
+
+        .crayon-tray {
+            background: linear-gradient(to right, #cfcfcf, #f0f0f0, #cfcfcf);
+            box-shadow: inset 5px 0 15px rgba(0,0,0,0.2), -5px 0 15px rgba(0,0,0,0.3);
+            border-radius: 20px 0 0 20px;
+            padding: 6px 3px;
+            width: 55px;
+            flex-shrink: 0;
+        }
+
+        .crayon-tray-left {
+            background: linear-gradient(to left, #cfcfcf, #f0f0f0, #cfcfcf);
+            box-shadow: inset -5px 0 15px rgba(0,0,0,0.2), 5px 0 15px rgba(0,0,0,0.3);
+            border-radius: 0 20px 20px 0;
+            padding: 6px 3px;
+            width: 55px;
+            flex-shrink: 0;
+        }
+
+        .crayon {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: none;
+            position: relative;
+        }
+
+        .crayon:hover {
+            transform: translateX(-8px);
+        }
+
+        .crayon.active {
+            transform: translateX(-20px) scale(1.1);
+            z-index: 10;
+        }
+
+        .crayon-left:hover {
+            transform: translateX(8px);
+        }
+
+        .crayon-left.active {
+            transform: translateX(20px) scale(1.1);
+            z-index: 10;
+        }
+
+        .drawing-path {
+            transition: fill 0.3s ease;
+            cursor: none;
+        }
+        
+        .drawing-path:hover {
+            opacity: 0.8;
+            stroke-width: 5px; 
+        }
+
+        #confetti-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        #celebration-overlay {
+            display: none;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .canvas-frame {
+            background-color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border: 4px solid #8D6E63;
+            border-radius: 6px;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+            min-height: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #canvas-container svg {
+            max-width: 95%;
+            max-height: 95%;
+            width: auto;
+            height: auto;
+            min-width: 200px;
+            min-height: 200px;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes starSpin {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.2); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .bounce-animation {
+            animation: bounce 0.5s ease-in-out infinite;
+        }
+
+        .star-spin {
+            animation: starSpin 1s ease-in-out infinite;
+        }
+
+        .level-name {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 2px;
+        }
+        
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+            min-width: 0;
+            min-height: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="select-none">
+    <!-- Portrait Warning -->
+    <div id="portrait-warning">
+        <div class="rotate-icon">📱</div>
+        <h2>Please Rotate Your Device</h2>
+        <p>Coloring works best in landscape mode!</p>
+    </div>
+
+    <!-- Left Sidebar: Crayon Tray -->
+    <div class="crayon-tray-left flex flex-col items-center justify-center gap-1 z-20 relative">
+        <div id="pencil-container-left" class="flex flex-col gap-2 w-full items-start pl-1"></div>
+    </div>
+
+    <!-- Main Whiteboard Area -->
+    <div class="main-area">
+        
+        <!-- The Paper with Wooden Frame -->
+        <div class="canvas-frame relative">
+
+            <!-- Drawing Container -->
+            <div id="canvas-container">
+            </div>
+
+            <!-- Celebration Overlay -->
+            <div id="celebration-overlay" class="absolute inset-0 flex items-center justify-center bg-black/40 rounded-sm z-40 backdrop-blur-sm">
+                <div class="bg-white p-10 rounded-3xl text-center shadow-2xl border-8 border-yellow-400 transform rotate-2">
+                    <div class="text-8xl mb-4 star-spin">⭐</div>
+                    <h2 class="text-5xl mb-4 text-purple-600 drop-shadow-md bounce-animation">Amazing! 🎉</h2>
+                    <p class="text-3xl text-green-500 font-bold">Great Job!</p>
+                    <p class="text-xl text-gray-600 mt-4">Loading next picture...</p>
+                </div>
+            </div>
+
+            <!-- Confetti Canvas -->
+            <canvas id="confetti-canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Right Sidebar: Crayon Tray -->
+    <div class="crayon-tray flex flex-col items-center justify-center gap-1 z-20 relative">
+        <div id="pencil-container" class="flex flex-col gap-2 w-full items-end pr-1"></div>
+    </div>
+
+    <!-- The Animated Cursor -->
+    <div id="cursor-hand">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <filter id="pen-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="3" dy="5" stdDeviation="4" flood-opacity="0.2"/>
+                </filter>
+            </defs>
+            
+            <g transform="translate(10, 190) rotate(-45)" filter="url(#pen-shadow)">
+                <rect id="marker-body" x="0" y="-15" width="160" height="30" rx="3" fill="#FF5252" stroke="#B71C1C" stroke-width="2"/>
+                <rect x="40" y="-15" width="90" height="30" fill="rgba(255,255,255,0.2)"/>
+                <line x1="40" y1="-15" x2="40" y2="15" stroke="#B71C1C" stroke-width="1"/>
+                <line x1="130" y1="-15" x2="130" y2="15" stroke="#B71C1C" stroke-width="1"/>
+                <path d="M50 0 Q 85 -8 120 0" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                <rect x="160" y="-15" width="25" height="30" rx="2" fill="#333"/>
+                <path id="marker-tip" d="M0 -10 L-30 0 L0 10 Z" fill="#FF5252"/>
+            </g>
+        </svg>
+    </div>
+
+    <script>
+        // Lock to landscape orientation
+        function lockLandscape() {
+            if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+                window.screen.orientation.lock('landscape').catch(function(e) {});
+            }
+            if (screen.lockOrientation) screen.lockOrientation('landscape');
+            else if (screen.mozLockOrientation) screen.mozLockOrientation('landscape');
+            else if (screen.msLockOrientation) screen.msLockOrientation('landscape');
+        }
+        document.addEventListener('DOMContentLoaded', lockLandscape);
+        document.addEventListener('deviceready', lockLandscape);
+
+        // --- GAME STATE ---
+        const colors = [
+            { name: 'Red', hex: '#FF5252', label: '#FF8A80' },
+            { name: 'Orange', hex: '#FFB142', label: '#FFCC80' },
+            { name: 'Yellow', hex: '#FFDA79', label: '#FFFF8D' },
+            { name: 'Green', hex: '#33D9B2', label: '#A7FFEB' },
+            { name: 'Blue', hex: '#34ACE0', label: '#80D8FF' },
+            { name: 'Purple', hex: '#706FD3', label: '#B388FF' },
+            { name: 'Pink', hex: '#FF6B9D', label: '#FFAB91' },
+            { name: 'Brown', hex: '#8C5642', label: '#D7CCC8' },
+            { name: 'Black', hex: '#333333', label: '#666666' },
+            { name: 'White', hex: '#FFFFFF', label: '#EEEEEE' }
+        ];
+
+        let state = {
+            currentColor: colors[0].hex,
+            currentLevel: 0,
+            isAnimating: false
+        };
+        
+        // --- SOUNDS ---
+        const winSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+        winSound.volume = 0.7;
+
+        const cheerSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+        cheerSound.volume = 0.8;
+
+        const fanfareSound = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
+        fanfareSound.volume = 0.6;
+
+        const clickSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+        clickSound.volume = 0.4;
+
+        // --- LEVELS (SVG DATA with Cartoon Characters) ---
+        const levels = [
+            // Level 1: Mickey Mouse Style Character
+            {
+                name: "Happy Mouse",
+                svg: `
+                <svg viewBox="0 0 400 400" class="max-w-full max-h-full drop-shadow-sm" style="width: auto; height: auto;">
+                    <!-- Left Ear -->
+                    <circle cx="100" cy="80" r="50" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Right Ear -->
+                    <circle cx="300" cy="80" r="50" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Head -->
+                    <circle cx="200" cy="180" r="100" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Face/Snout -->
+                    <ellipse cx="200" cy="220" rx="50" ry="40" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Nose -->
+                    <ellipse cx="200" cy="200" rx="15" ry="12" fill="black"/>
+                    <!-- Left Eye -->
+                    <ellipse cx="160" cy="160" rx="20" ry="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="165" cy="160" r="8" fill="black"/>
+                    <!-- Right Eye -->
+                    <ellipse cx="240" cy="160" rx="20" ry="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="235" cy="160" r="8" fill="black"/>
+                    <!-- Smile -->
+                    <path d="M160 240 Q200 280 240 240" fill="none" stroke="black" stroke-width="4" stroke-linecap="round"/>
+                    <!-- Tongue -->
+                    <ellipse cx="200" cy="255" rx="15" ry="10" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <!-- Bow Tie -->
+                    <path d="M150 300 L180 320 L150 340 Z" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <path d="M250 300 L220 320 L250 340 Z" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="200" cy="320" r="12" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                </svg>
+                `
+            },
+            // Level 2: SpongeBob Style Character
+            {
+                name: "Sponge Friend",
+                svg: `
+                <svg viewBox="0 0 400 400" class="max-w-full max-h-full drop-shadow-sm" style="width: auto; height: auto;">
+                    <!-- Body -->
+                    <rect x="100" y="60" width="200" height="220" rx="20" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Holes -->
+                    <circle cx="140" cy="120" r="12" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="200" cy="100" r="10" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="260" cy="130" r="14" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="150" cy="200" r="10" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="250" cy="210" r="12" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Left Eye -->
+                    <circle cx="160" cy="150" r="30" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <circle cx="170" cy="150" r="15" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <circle cx="175" cy="150" r="6" fill="black"/>
+                    <!-- Right Eye -->
+                    <circle cx="240" cy="150" r="30" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <circle cx="230" cy="150" r="15" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <circle cx="225" cy="150" r="6" fill="black"/>
+                    <!-- Nose -->
+                    <ellipse cx="200" cy="180" rx="8" ry="15" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Mouth -->
+                    <path d="M150 220 Q200 260 250 220" fill="none" stroke="black" stroke-width="4"/>
+                    <!-- Teeth -->
+                    <rect x="185" y="220" width="15" height="20" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <rect x="200" y="220" width="15" height="20" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <!-- Cheeks -->
+                    <circle cx="130" cy="200" r="15" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <circle cx="270" cy="200" r="15" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <!-- Pants -->
+                    <rect x="100" y="280" width="200" height="50" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Belt -->
+                    <rect x="100" y="280" width="200" height="15" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Legs -->
+                    <rect x="140" y="330" width="30" height="50" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <rect x="230" y="330" width="30" height="50" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Shoes -->
+                    <ellipse cx="155" cy="385" rx="25" ry="15" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <ellipse cx="245" cy="385" rx="25" ry="15" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                </svg>
+                `
+            },
+            // Level 3: Pikachu Style Character
+            {
+                name: "Electric Buddy",
+                svg: `
+                <svg viewBox="0 0 400 400" class="max-w-full max-h-full drop-shadow-sm" style="width: auto; height: auto;">
+                    <!-- Left Ear -->
+                    <path d="M80 50 L120 150 L60 130 Z" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <path d="M80 50 L95 90 L70 85 Z" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Right Ear -->
+                    <path d="M320 50 L280 150 L340 130 Z" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <path d="M320 50 L305 90 L330 85 Z" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Head -->
+                    <ellipse cx="200" cy="200" rx="120" ry="100" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Left Eye -->
+                    <circle cx="150" cy="180" r="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="155" cy="175" r="12" fill="black"/>
+                    <circle cx="160" cy="170" r="5" fill="white"/>
+                    <!-- Right Eye -->
+                    <circle cx="250" cy="180" r="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="245" cy="175" r="12" fill="black"/>
+                    <circle cx="240" cy="170" r="5" fill="white"/>
+                    <!-- Nose -->
+                    <circle cx="200" cy="210" r="8" fill="black"/>
+                    <!-- Cheeks -->
+                    <circle cx="100" cy="220" r="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="300" cy="220" r="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Mouth -->
+                    <path d="M180 240 Q200 260 220 240" fill="none" stroke="black" stroke-width="3"/>
+                    <!-- Body -->
+                    <ellipse cx="200" cy="340" rx="80" ry="50" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Arms -->
+                    <ellipse cx="100" cy="320" rx="25" ry="40" transform="rotate(-30 100 320)" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <ellipse cx="300" cy="320" rx="25" ry="40" transform="rotate(30 300 320)" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Tail -->
+                    <path d="M280 340 L350 300 L340 280 L370 250 L350 240 L380 200 L320 260 L330 280 L300 300 Z" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                </svg>
+                `
+            },
+            // Level 4: Hello Kitty Style Character
+            {
+                name: "Kitty Cat",
+                svg: `
+                <svg viewBox="0 0 400 400" class="max-w-full max-h-full drop-shadow-sm" style="width: auto; height: auto;">
+                    <!-- Left Ear -->
+                    <path d="M80 80 L120 180 L50 150 Z" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Right Ear -->
+                    <path d="M320 80 L280 180 L350 150 Z" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Head -->
+                    <ellipse cx="200" cy="200" rx="130" ry="110" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Left Eye -->
+                    <ellipse cx="150" cy="180" rx="12" ry="15" fill="black"/>
+                    <!-- Right Eye -->
+                    <ellipse cx="250" cy="180" rx="12" ry="15" fill="black"/>
+                    <!-- Nose -->
+                    <ellipse cx="200" cy="220" rx="10" ry="8" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Whiskers Left -->
+                    <line x1="80" y1="200" x2="140" y2="210" stroke="black" stroke-width="3"/>
+                    <line x1="80" y1="230" x2="140" y2="230" stroke="black" stroke-width="3"/>
+                    <line x1="80" y1="260" x2="140" y2="250" stroke="black" stroke-width="3"/>
+                    <!-- Whiskers Right -->
+                    <line x1="320" y1="200" x2="260" y2="210" stroke="black" stroke-width="3"/>
+                    <line x1="320" y1="230" x2="260" y2="230" stroke="black" stroke-width="3"/>
+                    <line x1="320" y1="260" x2="260" y2="250" stroke="black" stroke-width="3"/>
+                    <!-- Bow -->
+                    <circle cx="320" cy="100" r="20" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <ellipse cx="290" cy="80" rx="30" ry="20" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <ellipse cx="350" cy="80" rx="30" ry="20" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <ellipse cx="290" cy="120" rx="25" ry="15" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <ellipse cx="350" cy="120" rx="25" ry="15" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Body -->
+                    <ellipse cx="200" cy="350" rx="70" ry="40" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                </svg>
+                `
+            },
+            // Level 5: Doraemon Style Character
+            {
+                name: "Robot Cat",
+                svg: `
+                <svg viewBox="0 0 400 400" class="max-w-full max-h-full drop-shadow-sm" style="width: auto; height: auto;">
+                    <!-- Head -->
+                    <circle cx="200" cy="150" r="110" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Face (white part) -->
+                    <ellipse cx="200" cy="180" rx="80" ry="70" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Left Eye -->
+                    <ellipse cx="170" cy="130" rx="25" ry="30" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="180" cy="130" r="8" fill="black"/>
+                    <!-- Right Eye -->
+                    <ellipse cx="230" cy="130" rx="25" ry="30" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="220" cy="130" r="8" fill="black"/>
+                    <!-- Nose -->
+                    <circle cx="200" cy="165" r="15" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Nose line -->
+                    <line x1="200" y1="180" x2="200" y2="220" stroke="black" stroke-width="3"/>
+                    <!-- Mouth -->
+                    <path d="M140 200 Q200 260 260 200" fill="none" stroke="black" stroke-width="3"/>
+                    <!-- Whiskers Left -->
+                    <line x1="100" y1="170" x2="150" y2="180" stroke="black" stroke-width="2"/>
+                    <line x1="100" y1="195" x2="150" y2="195" stroke="black" stroke-width="2"/>
+                    <line x1="100" y1="220" x2="150" y2="210" stroke="black" stroke-width="2"/>
+                    <!-- Whiskers Right -->
+                    <line x1="300" y1="170" x2="250" y2="180" stroke="black" stroke-width="2"/>
+                    <line x1="300" y1="195" x2="250" y2="195" stroke="black" stroke-width="2"/>
+                    <line x1="300" y1="220" x2="250" y2="210" stroke="black" stroke-width="2"/>
+                    <!-- Bell Collar -->
+                    <rect x="130" y="255" width="140" height="20" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="200" cy="290" r="20" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <line x1="200" y1="280" x2="200" y2="300" stroke="black" stroke-width="2"/>
+                    <!-- Body -->
+                    <ellipse cx="200" cy="350" rx="80" ry="50" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Belly pocket -->
+                    <ellipse cx="200" cy="355" rx="40" ry="30" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                </svg>
+                `
+            },
+            // Level 6: Patrick Star Style
+            {
+                name: "Starfish Pal",
+                svg: `
+                <svg viewBox="0 0 400 400" class="max-w-full max-h-full drop-shadow-sm" style="width: auto; height: auto;">
+                    <!-- Star Body -->
+                    <path d="M200 30 L230 140 L350 140 L250 200 L280 320 L200 250 L120 320 L150 200 L50 140 L170 140 Z" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Pants -->
+                    <path d="M140 240 L170 140 L230 140 L260 240 L200 250 Z" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Left Eye -->
+                    <circle cx="170" cy="130" r="20" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="175" cy="130" r="8" fill="black"/>
+                    <!-- Right Eye -->
+                    <circle cx="230" cy="130" r="20" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="225" cy="130" r="8" fill="black"/>
+                    <!-- Eyebrows -->
+                    <path d="M150 105 Q170 95 190 105" fill="none" stroke="black" stroke-width="4"/>
+                    <path d="M210 105 Q230 95 250 105" fill="none" stroke="black" stroke-width="4"/>
+                    <!-- Mouth -->
+                    <ellipse cx="200" cy="180" rx="30" ry="20" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Belly button -->
+                    <circle cx="200" cy="220" r="8" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <!-- Flowers on pants -->
+                    <circle cx="160" cy="200" r="8" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <circle cx="200" cy="210" r="8" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <circle cx="240" cy="200" r="8" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                </svg>
+                `
+            },
+            // Level 7: Minion Style Character
+            {
+                name: "Yellow Helper",
+                svg: `
+                <svg viewBox="0 0 400 400" class="max-w-full max-h-full drop-shadow-sm" style="width: auto; height: auto;">
+                    <!-- Body -->
+                    <rect x="120" y="100" width="160" height="200" rx="80" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Goggles Strap -->
+                    <rect x="100" y="140" width="200" height="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Left Goggle -->
+                    <circle cx="160" cy="155" r="35" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <circle cx="160" cy="155" r="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="165" cy="155" r="10" fill="black"/>
+                    <circle cx="170" cy="150" r="4" fill="white"/>
+                    <!-- Right Goggle -->
+                    <circle cx="240" cy="155" r="35" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <circle cx="240" cy="155" r="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="235" cy="155" r="10" fill="black"/>
+                    <circle cx="230" cy="150" r="4" fill="white"/>
+                    <!-- Hair -->
+                    <path d="M180 100 Q180 70 170 60" fill="none" stroke="black" stroke-width="4"/>
+                    <path d="M200 100 Q200 65 200 55" fill="none" stroke="black" stroke-width="4"/>
+                    <path d="M220 100 Q220 70 230 60" fill="none" stroke="black" stroke-width="4"/>
+                    <!-- Smile -->
+                    <path d="M160 220 Q200 260 240 220" fill="none" stroke="black" stroke-width="4"/>
+                    <!-- Overalls -->
+                    <rect x="140" y="260" width="120" height="60" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Pocket -->
+                    <rect x="175" y="275" width="50" height="30" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <!-- Straps -->
+                    <line x1="140" y1="260" x2="160" y2="230" stroke="black" stroke-width="4"/>
+                    <line x1="260" y1="260" x2="240" y2="230" stroke="black" stroke-width="4"/>
+                    <!-- Buttons -->
+                    <circle cx="165" cy="235" r="6" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <circle cx="235" cy="235" r="6" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <!-- Legs -->
+                    <rect x="150" y="320" width="30" height="40" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <rect x="220" y="320" width="30" height="40" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Shoes -->
+                    <ellipse cx="165" cy="365" rx="25" ry="12" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <ellipse cx="235" cy="365" rx="25" ry="12" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Arms -->
+                    <ellipse cx="100" cy="220" rx="20" ry="40" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <ellipse cx="300" cy="220" rx="20" ry="40" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                </svg>
+                `
+            },
+            // Level 8: Peppa Pig Style
+            {
+                name: "Piggy",
+                svg: `
+                <svg viewBox="0 0 400 400" class="max-w-full max-h-full drop-shadow-sm" style="width: auto; height: auto;">
+                    <!-- Head -->
+                    <ellipse cx="200" cy="150" rx="100" ry="80" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Snout -->
+                    <ellipse cx="280" cy="150" rx="40" ry="30" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Nostrils -->
+                    <circle cx="275" cy="145" r="6" fill="black"/>
+                    <circle cx="295" cy="145" r="6" fill="black"/>
+                    <!-- Left Eye -->
+                    <circle cx="180" cy="130" r="15" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="183" cy="130" r="5" fill="black"/>
+                    <!-- Right Eye -->
+                    <circle cx="230" cy="130" r="15" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="233" cy="130" r="5" fill="black"/>
+                    <!-- Mouth -->
+                    <path d="M200 180 Q220 200 240 180" fill="none" stroke="black" stroke-width="3"/>
+                    <!-- Left Ear -->
+                    <ellipse cx="130" cy="80" rx="20" ry="35" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Right Ear -->
+                    <ellipse cx="220" cy="70" rx="20" ry="35" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Body (dress) -->
+                    <path d="M130 230 Q130 280 200 300 Q270 280 270 230 L270 200 Q200 190 130 200 Z" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Arms -->
+                    <line x1="130" y1="220" x2="90" y2="260" stroke="black" stroke-width="8" stroke-linecap="round"/>
+                    <line x1="270" y1="220" x2="310" y2="260" stroke="black" stroke-width="8" stroke-linecap="round"/>
+                    <!-- Hands -->
+                    <circle cx="90" cy="265" r="12" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="310" cy="265" r="12" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Legs -->
+                    <line x1="170" y1="300" x2="160" y2="350" stroke="black" stroke-width="8" stroke-linecap="round"/>
+                    <line x1="230" y1="300" x2="240" y2="350" stroke="black" stroke-width="8" stroke-linecap="round"/>
+                    <!-- Shoes -->
+                    <ellipse cx="155" cy="360" rx="20" ry="12" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <ellipse cx="245" cy="360" rx="20" ry="12" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Cheeks -->
+                    <circle cx="160" cy="165" r="10" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                </svg>
+                `
+            },
+            // Level 9: Winnie the Pooh Style
+            {
+                name: "Honey Bear",
+                svg: `
+                <svg viewBox="0 0 400 400" class="max-w-full max-h-full drop-shadow-sm" style="width: auto; height: auto;">
+                    <!-- Left Ear -->
+                    <circle cx="120" cy="80" r="35" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <circle cx="120" cy="80" r="20" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Right Ear -->
+                    <circle cx="280" cy="80" r="35" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <circle cx="280" cy="80" r="20" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Head -->
+                    <ellipse cx="200" cy="150" rx="100" ry="90" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Snout -->
+                    <ellipse cx="200" cy="180" rx="40" ry="30" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Nose -->
+                    <ellipse cx="200" cy="165" rx="12" ry="10" fill="black"/>
+                    <!-- Left Eye -->
+                    <circle cx="160" cy="130" r="8" fill="black"/>
+                    <!-- Right Eye -->
+                    <circle cx="240" cy="130" r="8" fill="black"/>
+                    <!-- Eyebrows -->
+                    <path d="M145 115 Q160 105 175 115" fill="none" stroke="black" stroke-width="3"/>
+                    <path d="M225 115 Q240 105 255 115" fill="none" stroke="black" stroke-width="3"/>
+                    <!-- Smile -->
+                    <path d="M180 200 Q200 220 220 200" fill="none" stroke="black" stroke-width="3"/>
+                    <!-- Body -->
+                    <ellipse cx="200" cy="310" rx="90" ry="80" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- T-shirt -->
+                    <path d="M130 260 Q200 240 270 260 L270 320 Q200 300 130 320 Z" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <!-- Arms -->
+                    <ellipse cx="100" cy="290" rx="30" ry="50" transform="rotate(-20 100 290)" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <ellipse cx="300" cy="290" rx="30" ry="50" transform="rotate(20 300 290)" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Legs -->
+                    <ellipse cx="150" cy="380" rx="35" ry="25" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <ellipse cx="250" cy="380" rx="35" ry="25" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                </svg>
+                `
+            },
+            // Level 10: Cute Unicorn
+            {
+                name: "Magic Unicorn",
+                svg: `
+                <svg viewBox="0 0 400 400" class="max-w-full max-h-full drop-shadow-sm" style="width: auto; height: auto;">
+                    <!-- Horn -->
+                    <path d="M200 20 L180 100 L220 100 Z" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Horn stripes -->
+                    <line x1="195" y1="40" x2="185" y2="70" stroke="black" stroke-width="2"/>
+                    <line x1="200" y1="55" x2="190" y2="85" stroke="black" stroke-width="2"/>
+                    <!-- Left Ear -->
+                    <path d="M120 80 L140 130 L100 120 Z" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Right Ear -->
+                    <path d="M280 80 L260 130 L300 120 Z" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Head -->
+                    <ellipse cx="200" cy="170" rx="100" ry="80" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Mane -->
+                    <path d="M100 120 Q60 150 80 200 Q60 250 100 280" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <path d="M80 140 Q40 170 60 220 Q40 270 80 300" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <path d="M300 120 Q340 150 320 200 Q340 250 300 280" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Left Eye -->
+                    <ellipse cx="160" cy="160" rx="20" ry="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="165" cy="160" r="10" fill="black"/>
+                    <circle cx="170" cy="155" r="4" fill="white"/>
+                    <!-- Right Eye -->
+                    <ellipse cx="240" cy="160" rx="20" ry="25" class="drawing-path" fill="white" stroke="black" stroke-width="3"/>
+                    <circle cx="235" cy="160" r="10" fill="black"/>
+                    <circle cx="230" cy="155" r="4" fill="white"/>
+                    <!-- Blush -->
+                    <ellipse cx="130" cy="190" rx="15" ry="10" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <ellipse cx="270" cy="190" rx="15" ry="10" class="drawing-path" fill="white" stroke="black" stroke-width="2"/>
+                    <!-- Nose -->
+                    <ellipse cx="200" cy="200" rx="8" ry="6" fill="black"/>
+                    <!-- Smile -->
+                    <path d="M180 220 Q200 240 220 220" fill="none" stroke="black" stroke-width="3"/>
+                    <!-- Body -->
+                    <ellipse cx="200" cy="320" rx="80" ry="60" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Legs -->
+                    <rect x="140" y="350" width="25" height="40" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <rect x="175" y="355" width="25" height="40" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <rect x="200" y="355" width="25" height="40" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <rect x="235" y="350" width="25" height="40" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                    <!-- Tail -->
+                    <path d="M280 310 Q330 290 340 330 Q350 370 310 380 Q270 390 280 350" class="drawing-path" fill="white" stroke="black" stroke-width="4"/>
+                </svg>
+                `
+            }
+        ];
+
+        // --- DOM ELEMENTS ---
+        const pencilContainer = document.getElementById('pencil-container');
+        const pencilContainerLeft = document.getElementById('pencil-container-left');
+        const canvasContainer = document.getElementById('canvas-container');
+        const cursorHand = document.getElementById('cursor-hand');
+        const markerTip = document.getElementById('marker-tip');
+        const markerBody = document.getElementById('marker-body');
+        const celebrationOverlay = document.getElementById('celebration-overlay');
+        const confettiCanvas = document.getElementById('confetti-canvas');
+
+        // --- INITIALIZATION ---
+        function init() {
+            renderCrayons();
+            loadLevel(state.currentLevel);
+            setupCursor();
+            
+            // Preload sounds
+            winSound.load();
+            cheerSound.load();
+            fanfareSound.load();
+            clickSound.load();
+        }
+
+        // --- RENDER CRAYONS ---
+        function renderCrayons() {
+            pencilContainer.innerHTML = '';
+            pencilContainerLeft.innerHTML = '';
+            
+            // Split colors: first 5 on left, last 5 on right
+            const leftColors = colors.slice(0, 5);
+            const rightColors = colors.slice(5);
+            
+            // Render left side crayons (mirrored)
+            leftColors.forEach((color, index) => {
+                const crayon = document.createElement('div');
+                crayon.className = `crayon crayon-left h-8 w-28 flex items-center cursor-pointer`;
+                if(index === 0) crayon.classList.add('active'); 
+
+                const borderColor = color.hex === '#FFFFFF' ? '#999' : color.hex;
+                
+                // Mirrored crayon pointing right
+                crayon.innerHTML = `
+                    <div class="flex-1 h-6 my-1 flex items-center justify-center relative shadow-sm rounded-l-md" style="background-color: ${color.hex}; border: 2px solid ${borderColor};">
+                        <div class="absolute inset-x-2 inset-y-1 bg-white/30 rounded-sm"></div>
+                        <span class="relative z-10 text-[10px] uppercase tracking-wider" style="color: ${color.hex === '#FFFFFF' || color.hex === '#FFDA79' ? '#333' : 'rgba(255,255,255,0.9)'};">${color.name}</span>
+                    </div>
+                    <div class="w-5 h-full" style="background-color: ${color.hex}; clip-path: polygon(0 0, 100% 50%, 0 100%); border: 2px solid ${borderColor};"></div>
+                `;
+
+                crayon.addEventListener('click', () => selectColorLeft(color, crayon));
+                pencilContainerLeft.appendChild(crayon);
+            });
+            
+            // Render right side crayons
+            rightColors.forEach((color, index) => {
+                const crayon = document.createElement('div');
+                crayon.className = `crayon h-8 w-28 flex items-center cursor-pointer`;
+
+                const borderColor = color.hex === '#FFFFFF' ? '#999' : color.hex;
+                
+                crayon.innerHTML = `
+                    <div class="w-5 h-full" style="background-color: ${color.hex}; clip-path: polygon(100% 0, 0 50%, 100% 100%); border: 2px solid ${borderColor};"></div>
+                    <div class="flex-1 h-6 my-1 flex items-center justify-center relative shadow-sm rounded-r-md" style="background-color: ${color.hex}; border: 2px solid ${borderColor};">
+                        <div class="absolute inset-x-2 inset-y-1 bg-white/30 rounded-sm"></div>
+                        <span class="relative z-10 text-[10px] uppercase tracking-wider" style="color: ${color.hex === '#FFFFFF' || color.hex === '#FFDA79' ? '#333' : 'rgba(255,255,255,0.9)'};">${color.name}</span>
+                    </div>
+                `;
+
+                crayon.addEventListener('click', () => selectColor(color, crayon));
+                pencilContainer.appendChild(crayon);
+            });
+        }
+        
+        // --- SELECT COLOR LOGIC (Left side) ---
+        function selectColorLeft(color, crayonElement) {
+            state.currentColor = color.hex;
+            
+            document.querySelectorAll('.crayon').forEach(p => p.classList.remove('active'));
+            crayonElement.classList.add('active');
+
+            markerTip.setAttribute('fill', color.hex);
+            markerBody.setAttribute('fill', color.hex);
+
+            if(color.hex === '#FF5252') markerBody.setAttribute('stroke', '#B71C1C');
+            else if(color.hex === '#FFFFFF') markerBody.setAttribute('stroke', '#999999');
+            else markerBody.setAttribute('stroke', color.hex);
+            
+            try { clickSound.currentTime = 0; clickSound.play(); } catch(e){}
+        }
+
+        // --- SELECT COLOR LOGIC ---
+        function selectColor(color, crayonElement) {
+            state.currentColor = color.hex;
+            
+            document.querySelectorAll('.crayon').forEach(p => p.classList.remove('active'));
+            crayonElement.classList.add('active');
+
+            markerTip.setAttribute('fill', color.hex);
+            markerBody.setAttribute('fill', color.hex);
+            
+            // Play click sound
+            clickSound.currentTime = 0;
+            clickSound.play().catch(e => {});
+        }
+
+        // --- CUSTOM CURSOR ---
+        function setupCursor() {
+            const scale = 150 / 200;
+            const tipX = 10 * scale; 
+            const tipY = 190 * scale;
+
+            document.addEventListener('mousemove', (e) => {
+                cursorHand.style.left = (e.clientX - tipX) + 'px';
+                cursorHand.style.top = (e.clientY - tipY) + 'px';
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                cursorHand.style.left = (touch.clientX - tipX) + 'px';
+                cursorHand.style.top = (touch.clientY - tipY) + 'px';
+            });
+        }
+
+        // --- LOAD LEVEL ---
+        function loadLevel(index) {
+            canvasContainer.innerHTML = levels[index].svg;
+            
+            const paths = canvasContainer.querySelectorAll('.drawing-path');
+            paths.forEach(path => {
+                path.addEventListener('click', (e) => colorArea(e, path));
+                path.addEventListener('touchstart', (e) => {
+                    e.preventDefault(); 
+                    colorArea(e, path);
+                });
+            });
+        }
+
+        // --- COLORING ACTION ---
+        function colorArea(e, pathElement) {
+            if (state.isAnimating) return; 
+            
+            state.isAnimating = true;
+            cursorHand.classList.add('coloring-action');
+
+            setTimeout(() => {
+                pathElement.setAttribute('fill', state.currentColor);
+                pathElement.setAttribute('data-colored', 'true'); 
+
+                cursorHand.classList.remove('coloring-action');
+                state.isAnimating = false;
+
+                // Play soft click for coloring
+                clickSound.currentTime = 0;
+                clickSound.play().catch(e => {});
+
+                checkWinCondition();
+            }, 300);
+        }
+
+        // --- WIN LOGIC ---
+        function checkWinCondition() {
+            const allPaths = canvasContainer.querySelectorAll('.drawing-path');
+            let isComplete = true;
+
+            allPaths.forEach(path => {
+                if (path.getAttribute('fill') === 'white') {
+                    isComplete = false;
+                }
+            });
+
+            if (isComplete) {
+                triggerWin();
+            }
+        }
+
+        function triggerWin() {
+            startConfetti();
+            
+            // Play celebration sounds sequence
+            winSound.currentTime = 0;
+            winSound.play().catch(e => console.log("Audio play blocked", e));
+            
+            // Play fanfare after short delay
+            setTimeout(() => {
+                fanfareSound.currentTime = 0;
+                fanfareSound.play().catch(e => {});
+            }, 300);
+            
+            // Play cheering sound
+            setTimeout(() => {
+                cheerSound.currentTime = 0;
+                cheerSound.play().catch(e => {});
+            }, 800);
+
+            setTimeout(() => {
+                celebrationOverlay.style.display = 'flex';
+            }, 500);
+
+            setTimeout(() => {
+                state.currentLevel = (state.currentLevel + 1) % levels.length;
+                loadLevel(state.currentLevel);
+                celebrationOverlay.style.display = 'none';
+                stopConfetti();
+            }, 3500); 
+        }
+
+        // --- CONFETTI ENGINE ---
+        let confettiInterval;
+        const ctx = confettiCanvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            confettiCanvas.width = canvasContainer.clientWidth;
+            confettiCanvas.height = canvasContainer.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 100);
+
+        function createParticle() {
+            const shapes = ['square', 'circle', 'star'];
+            return {
+                x: Math.random() * confettiCanvas.width,
+                y: -20,
+                color: colors[Math.floor(Math.random() * colors.length)].hex,
+                size: Math.random() * 12 + 6,
+                speedY: Math.random() * 4 + 3,
+                speedX: Math.random() * 6 - 3,
+                rotation: Math.random() * 360,
+                rotationSpeed: Math.random() * 10 - 5,
+                shape: shapes[Math.floor(Math.random() * shapes.length)]
+            };
+        }
+
+        function drawStar(ctx, x, y, size, color) {
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                const px = x + size * Math.cos(angle);
+                const py = y + size * Math.sin(angle);
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function updateConfetti() {
+            ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            if (particles.length < 150) particles.push(createParticle());
+            
+            particles.forEach((p, index) => {
+                p.y += p.speedY;
+                p.x += p.speedX;
+                p.rotation += p.rotationSpeed;
+                
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.rotation * Math.PI) / 180);
+                ctx.fillStyle = p.color;
+                
+                if (p.shape === 'square') {
+                    ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                } else if (p.shape === 'circle') {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, p.size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    drawStar(ctx, 0, 0, p.size/2, p.color);
+                }
+                
+                ctx.restore();
+                
+                if (p.y > confettiCanvas.height) {
+                    particles[index] = createParticle();
+                }
+            });
+        }
+
+        function startConfetti() {
+            if (confettiInterval) clearInterval(confettiInterval);
+            resizeCanvas();
+            confettiInterval = setInterval(updateConfetti, 16);
+        }
+
+        function stopConfetti() {
+            clearInterval(confettiInterval);
+            ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            particles = [];
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
