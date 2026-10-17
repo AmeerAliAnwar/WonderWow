@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pip's Endless Adventure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Landscape enforcement */
+        #portrait-warning {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: 'Nunito', sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        #portrait-warning .rotate-icon {
+            font-size: 80px;
+            animation: rotatePhone 2s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes rotatePhone {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+        #portrait-warning h2 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        #portrait-warning p { font-size: 18px; opacity: 0.9; }
+        
+        @media (orientation: portrait) {
+            #portrait-warning { display: flex !important; }
+            #gameCanvas, #ui-layer { display: none !important; }
+        }
+        @media (orientation: landscape) {
+            #portrait-warning { display: none !important; }
+        }
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #87CEEB;
+            font-family: 'Nunito', sans-serif;
+            touch-action: none;
+            user-select: none;
+        }
+        #gameCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        .interactive-area { pointer-events: auto; }
+        @keyframes bounceIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
+        .tool-btn { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 0 rgba(0,0,0,0.15); }
+        .tool-btn:active { transform: translateY(4px); box-shadow: 0 0 0 rgba(0,0,0,0.15); }
+        .tool-btn:hover { transform: scale(1.05); }
+        
+        /* Side controls panels - left and right */
+        .controls-side {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 20;
+            pointer-events: auto;
+        }
+        #controls-left {
+            left: 6px;
+        }
+        #controls-right {
+            right: 6px;
+        }
+        .title-font { font-family: 'Fredoka One', cursive; text-shadow: 2px 2px 0px rgba(0,0,0,0.1); }
+        .hidden { display: none !important; }
+        .btn-disabled { opacity: 0.6; filter: grayscale(80%); transform: scale(0.95) !important; box-shadow: none !important; cursor: default; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <!-- Portrait Warning -->
+    <div id="portrait-warning">
+        <div class="rotate-icon">📱</div>
+        <h2>Please Rotate Your Device</h2>
+        <p>This game works best in landscape mode!</p>
+    </div>
+    
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui-layer" class="p-4 sm:p-6">
+        <div class="w-full flex justify-center interactive-area">
+            <div id="instruction-panel" class="bg-white/90 backdrop-blur-sm border-b-4 border-blue-300 rounded-2xl p-4 shadow-xl max-w-md text-center transform transition-all duration-500">
+                <h1 id="level-title" class="title-font text-2xl text-blue-600 mb-1">Adventure Awaits</h1>
+                <p id="level-desc" class="text-gray-700 font-bold text-lg">Loading...</p>
+                <div id="progress-dots" class="flex justify-center gap-2 mt-2"></div>
+            </div>
+        </div>
+        <div id="message-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden">
+            <div class="bg-white border-4 border-yellow-400 rounded-3xl p-8 shadow-2xl text-center animate-[bounceIn_0.5s_ease-out]">
+                <h2 id="msg-title" class="title-font text-4xl text-yellow-500 mb-2">Wonderful!</h2>
+                <p id="msg-sub" class="text-gray-600 text-xl">Pip found the way home!</p>
+                <button id="next-btn" class="interactive-area mt-6 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg text-xl transition-transform transform hover:scale-105">Continue Adventure</button>
+            </div>
+        </div>
+        <div id="controls-area" class="interactive-area hidden"></div>
+    </div>
+    
+    <!-- Side Controls - Split Left and Right -->
+    <div id="controls-left" class="controls-side interactive-area"></div>
+    <div id="controls-right" class="controls-side interactive-area"></div>
+
+<script>
+// Lock to landscape orientation
+function lockLandscape() {
+    // Try Cordova plugin first
+    if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+        window.screen.orientation.lock('landscape').catch(function(e) {
+            console.log('Orientation lock failed:', e);
+        });
+    }
+    // Also try the older API
+    if (screen.lockOrientation) {
+        screen.lockOrientation('landscape');
+    } else if (screen.mozLockOrientation) {
+        screen.mozLockOrientation('landscape');
+    } else if (screen.msLockOrientation) {
+        screen.msLockOrientation('landscape');
+    }
+}
+
+// Lock on load and device ready
+document.addEventListener('DOMContentLoaded', lockLandscape);
+document.addEventListener('deviceready', lockLandscape);
+
+/**
+ * Audio Manager using Web Audio API
+ */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+const Sound = {
+    playTone: (freq, type, duration, vol=0.1) => {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    },
+    success: () => {
+        Sound.playTone(440, 'sine', 0.1, 0.2);
+        setTimeout(() => Sound.playTone(554, 'sine', 0.1, 0.2), 100);
+        setTimeout(() => Sound.playTone(659, 'sine', 0.3, 0.2), 200);
+    },
+    step: () => Sound.playTone(150, 'triangle', 0.05, 0.05),
+    splash: () => {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.3);
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+    },
+    climb: () => Sound.playTone(200, 'square', 0.1, 0.05),
+    pop: () => Sound.playTone(600, 'sine', 0.1, 0.1),
+    error: () => Sound.playTone(150, 'sawtooth', 0.2, 0.1)
+};
+
+const CONFIG = {
+    colors: {
+        pipBody: '#FF7043', pipBelly: '#FFAB91'
+    },
+    tools: [
+        { 
+            type: 'bridge', color: '#795548', label: 'Bridge', 
+            path: 'M4 36 Q 24 10 44 36 M 4 36 L 44 36' 
+        },
+        { 
+            type: 'ladder', color: '#FFA726', label: 'Ladder', 
+            path: 'M12 6 L12 42 M36 6 L36 42 M12 12 L36 12 M12 24 L36 24 M12 36 L36 36' 
+        },
+        { 
+            type: 'rope', color: '#8D6E63', label: 'Rope', 
+            path: 'M24 6 C 8 6 8 30 24 24 C 40 18 40 42 24 42' 
+        },
+        { 
+            type: 'rock', color: '#757575', label: 'Rock', 
+            path: 'M24 8 Q 40 8 42 24 Q 40 40 24 42 Q 8 40 6 24 Q 8 8 24 8' 
+        },
+        { 
+            type: 'water', color: '#039BE5', label: 'Water', 
+            path: 'M24 6 Q 38 24 38 32 A 14 14 0 1 1 10 32 Q 10 24 24 6' 
+        },
+        { 
+            type: 'key', color: '#FDD835', label: 'Key', 
+            path: 'M18 30 A 8 8 0 1 1 26 16 L 42 32 L 42 38 L 36 38 L 36 32 L 32 32 L 24 24' 
+        },
+        { 
+            type: 'flower', color: '#EC407A', label: 'Flower', 
+            path: 'M24 24 m-6 0 a6 6 0 1 0 12 0 a6 6 0 1 0 -12 0 M24 10 L24 38 M10 24 L38 24' 
+        },
+        {
+            type: 'flippers', color: '#00897B', label: 'Swim',
+            path: 'M6 20 Q 15 10 24 20 Q 33 30 42 20 M 6 30 Q 15 20 24 30 Q 33 40 42 30'
+        }
+    ]
+};
+
+const LEVELS = [
+    // Level 1
+    {
+        title: "Jungle Start", theme: 'jungle', outfit: 'adventurer',
+        steps: [
+            { tool: 'bridge', instruction: "A gap! Build a bridge.", type: 'gap', x: 0.35 },
+            { tool: 'key', instruction: "Locked gate! Use the Key.", type: 'gate', x: 0.65 }
+        ]
+    },
+    // Level 2
+    {
+        title: "Snowy Climb", theme: 'mountain', outfit: 'climber',
+        steps: [
+            { tool: 'ladder', instruction: "Too high! Climb the Ladder.", type: 'wall', x: 0.35 },
+            { tool: 'rope', instruction: "A chasm! Use the Rope.", type: 'rope_gap', x: 0.65 }
+        ]
+    },
+    // Level 3
+    {
+        title: "Hot Path", theme: 'volcano', outfit: 'firefighter',
+        steps: [
+            { tool: 'water', instruction: "Fire ahead! Use Water.", type: 'fire', x: 0.35 },
+            { tool: 'rock', instruction: "Lava! Throw a Rock.", type: 'lava_river', x: 0.65 }
+        ]
+    },
+    // Level 4
+    {
+        title: "Lake Side", theme: 'village', outfit: 'casual',
+        steps: [
+            { tool: 'flippers', instruction: "A big lake! Time to Swim.", type: 'lake', x: 0.35 },
+            { tool: 'flower', instruction: "A grumpy dog! Give a Flower.", type: 'dog', x: 0.65 }
+        ]
+    },
+    // Level 5
+    {
+        title: "Deep Jungle", theme: 'jungle', outfit: 'adventurer',
+        steps: [
+            { tool: 'ladder', instruction: "A steep cliff! Use the Ladder.", type: 'wall', x: 0.35 },
+            { tool: 'flippers', instruction: "A river! Time to Swim.", type: 'lake', x: 0.65 }
+        ]
+    },
+    // Level 6
+    {
+        title: "Mountain Pass", theme: 'mountain', outfit: 'climber',
+        steps: [
+            { tool: 'bridge', instruction: "A gap in the rock! Build a Bridge.", type: 'gap', x: 0.35 },
+            { tool: 'ladder', instruction: "Another cliff! Use the Ladder.", type: 'wall', x: 0.65 }
+        ]
+    },
+    // Level 7
+    {
+        title: "Volcano Gate", theme: 'volcano', outfit: 'firefighter',
+        steps: [
+            { tool: 'key', instruction: "An old gate! Use the Key.", type: 'gate', x: 0.35 },
+            { tool: 'rock', instruction: "Lava flow! Throw a Rock.", type: 'lava_river', x: 0.65 }
+        ]
+    },
+    // Level 8
+    {
+        title: "Village Fire", theme: 'village', outfit: 'casual',
+        steps: [
+            { tool: 'water', instruction: "A bonfire blocks the path! Use Water.", type: 'fire', x: 0.35 },
+            { tool: 'bridge', instruction: "A stream! Build a Bridge.", type: 'gap', x: 0.65 }
+        ]
+    },
+    // Level 9
+    {
+        title: "Wild Jungle", theme: 'jungle', outfit: 'adventurer',
+        steps: [
+            { tool: 'rope', instruction: "A deep pit! Use the Rope.", type: 'rope_gap', x: 0.35 },
+            { tool: 'flower', instruction: "A wild monkey! Give a Flower.", type: 'dog', x: 0.65 }
+        ]
+    },
+    // Level 10
+    {
+        title: "High Peak", theme: 'mountain', outfit: 'climber',
+        steps: [
+            { tool: 'key', instruction: "A mountain door! Use the Key.", type: 'gate', x: 0.35 },
+            { tool: 'rope', instruction: "A canyon! Use the Rope.", type: 'rope_gap', x: 0.65 }
+        ]
+    },
+    // Level 11
+    {
+        title: "Lava Wall", theme: 'volcano', outfit: 'firefighter',
+        steps: [
+            { tool: 'ladder', instruction: "A rock wall! Use the Ladder.", type: 'wall', x: 0.35 },
+            { tool: 'water', instruction: "Hot ground! Cool it with Water.", type: 'fire', x: 0.65 }
+        ]
+    },
+    // Level 12
+    {
+        title: "Village Pond", theme: 'village', outfit: 'casual',
+        steps: [
+            { tool: 'flower', instruction: "A nice dog! Give a Flower.", type: 'dog', x: 0.35 },
+            { tool: 'flippers', instruction: "The pond! Time to Swim.", type: 'lake', x: 0.65 }
+        ]
+    },
+    // Level 13
+    {
+        title: "River Crossing", theme: 'jungle', outfit: 'adventurer',
+        steps: [
+            { tool: 'flippers', instruction: "The river is deep! Swim.", type: 'lake', x: 0.35 },
+            { tool: 'water', instruction: "A campfire! Put it out.", type: 'fire', x: 0.65 }
+        ]
+    },
+    // Level 14
+    {
+        title: "Rocky Road", theme: 'mountain', outfit: 'climber',
+        steps: [
+            { tool: 'ladder', instruction: "Climb up!", type: 'wall', x: 0.35 },
+            { tool: 'bridge', instruction: "Cross the gap!", type: 'gap', x: 0.65 }
+        ]
+    },
+    // Level 15
+    {
+        title: "Magma Path", theme: 'volcano', outfit: 'firefighter',
+        steps: [
+            { tool: 'rock', instruction: "Jump on the Rock!", type: 'lava_river', x: 0.35 },
+            { tool: 'rope', instruction: "Swing across!", type: 'rope_gap', x: 0.65 }
+        ]
+    },
+    // Level 16
+    {
+        title: "Home Gate", theme: 'village', outfit: 'casual',
+        steps: [
+            { tool: 'key', instruction: "Open the gate!", type: 'gate', x: 0.35 },
+            { tool: 'ladder', instruction: "Climb the fence!", type: 'wall', x: 0.65 }
+        ]
+    },
+    // Level 17
+    {
+        title: "Jungle Gym", theme: 'jungle', outfit: 'adventurer',
+        steps: [
+            { tool: 'flower', instruction: "Make friends!", type: 'dog', x: 0.35 },
+            { tool: 'bridge', instruction: "Cross the water!", type: 'gap', x: 0.65 }
+        ]
+    },
+    // Level 18
+    {
+        title: "Cold Fire", theme: 'mountain', outfit: 'climber',
+        steps: [
+            { tool: 'water', instruction: "Put out the fire!", type: 'fire', x: 0.35 },
+            { tool: 'rope', instruction: "Swing to safety!", type: 'rope_gap', x: 0.65 }
+        ]
+    },
+    // Level 19
+    {
+        title: "Final Climb", theme: 'volcano', outfit: 'firefighter',
+        steps: [
+            { tool: 'ladder', instruction: "Climb the rock!", type: 'wall', x: 0.35 },
+            { tool: 'rock', instruction: "Cross the lava!", type: 'lava_river', x: 0.65 }
+        ]
+    },
+    // Level 20
+    {
+        title: "Victory Lap", theme: 'village', outfit: 'casual',
+        steps: [
+            { tool: 'bridge', instruction: "Almost there!", type: 'gap', x: 0.35 },
+            { tool: 'key', instruction: "Unlock the door!", type: 'gate', x: 0.65 }
+        ]
+    }
+];
+
+let state = {
+    currentLevelIdx: 0, 
+    currentStepIdx: 0, 
+    isAnimating: false, 
+    pipX: 0.1, 
+    targetPipX: 0.1, 
+    pipYOffset: 0, 
+    action: 'walk', 
+    pipAlpha: 1,
+    blinkTimer: 0, 
+    particles: [], 
+    clouds: [],
+    levelSolved: false
+};
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function init() {
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    generateClouds();
+    setupControls();
+    loadLevel(0);
+    loop();
+}
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+function generateClouds() {
+    state.clouds = Array.from({length: 5}, () => ({
+        x: Math.random() * canvas.width, y: Math.random() * (canvas.height * 0.4),
+        size: 30 + Math.random() * 50, speed: 0.1 + Math.random() * 0.2
+    }));
+}
+
+function setupControls() {
+    const leftContainer = document.getElementById('controls-left');
+    const rightContainer = document.getElementById('controls-right');
+    leftContainer.innerHTML = '';
+    rightContainer.innerHTML = '';
+    
+    const halfCount = Math.ceil(CONFIG.tools.length / 2);
+    CONFIG.tools.forEach((tool, index) => {
+        const btn = document.createElement('button');
+        btn.id = `btn-${tool.type}`;
+        btn.className = `tool-btn w-11 h-11 rounded-lg bg-white border-2 flex flex-col items-center justify-center`;
+        btn.style.borderColor = tool.color;
+        btn.innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 48 48" stroke="${tool.color}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="${tool.path}" />
+            </svg>`;
+        btn.title = tool.label;
+        btn.onclick = () => handleToolInput(tool.type);
+        // First half goes left, second half goes right
+        if(index < halfCount) {
+            leftContainer.appendChild(btn);
+        } else {
+            rightContainer.appendChild(btn);
+        }
+    });
+    
+    // Audio resume on Start/Next click
+    const nextBtn = document.getElementById('next-btn');
+    nextBtn.onclick = () => {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        loadLevel(state.currentLevelIdx + 1);
+    };
+}
+
+function loadLevel(idx) {
+    // Loop levels infinitely
+    if (idx >= LEVELS.length) idx = 0; 
+    
+    state.currentLevelIdx = idx;
+    state.currentStepIdx = 0;
+    state.levelSolved = false;
+    state.pipX = 0.1;
+    state.targetPipX = 0.25; 
+    state.pipYOffset = 0;
+    state.action = 'walk';
+    state.pipAlpha = 1;
+    state.isAnimating = true;
+    
+    const lvl = LEVELS[idx];
+    document.getElementById('level-title').innerText = lvl.title;
+    updateInstruction();
+    
+    document.getElementById('message-overlay').classList.add('hidden');
+    document.getElementById('controls-area').classList.remove('hidden');
+    document.getElementById('instruction-panel').classList.remove('opacity-0');
+    
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('btn-disabled'));
+    updateProgressDots();
+}
+
+function updateInstruction() {
+    const lvl = LEVELS[state.currentLevelIdx];
+    const step = lvl.steps[state.currentStepIdx];
+    const text = step ? step.instruction : "Go to the house!";
+    document.getElementById('level-desc').innerText = text;
+}
+
+function updateProgressDots() {
+    const lvl = LEVELS[state.currentLevelIdx];
+    const container = document.getElementById('progress-dots');
+    container.innerHTML = '';
+    lvl.steps.forEach((s, i) => {
+        const dot = document.createElement('div');
+        const isDone = i < state.currentStepIdx;
+        dot.className = `w-3 h-3 rounded-full mx-1 ${isDone ? 'bg-green-500' : 'bg-gray-300'}`;
+        container.appendChild(dot);
+    });
+}
+
+function handleToolInput(toolType) {
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    if (state.levelSolved || state.isAnimating) return;
+    
+    const lvl = LEVELS[state.currentLevelIdx];
+    const currentStep = lvl.steps[state.currentStepIdx];
+
+    if (!currentStep) return; 
+
+    if (toolType === currentStep.tool) {
+        Sound.pop();
+        createParticles(canvas.width * 0.5, canvas.height * 0.6, CONFIG.tools.find(t=>t.type===toolType).color);
+        state.currentStepIdx++;
+        updateProgressDots();
+        state.isAnimating = true;
+        
+        if (state.currentStepIdx < lvl.steps.length) {
+            const nextX = lvl.steps[state.currentStepIdx].x;
+            state.targetPipX = nextX - 0.1; 
+            setTimeout(() => { updateInstruction(); }, 500);
+        } else {
+            state.levelSolved = true;
+            state.targetPipX = 0.85; 
+            document.getElementById('controls-area').classList.add('hidden');
+            document.getElementById('instruction-panel').classList.add('opacity-0');
+        }
+    } else {
+        Sound.error();
+        const panel = document.getElementById('instruction-panel');
+        panel.classList.add('animate-pulse', 'border-red-500');
+        setTimeout(() => panel.classList.remove('animate-pulse', 'border-red-500'), 500);
+    }
+}
+
+function createParticles(x, y, color) {
+    for (let i = 0; i < 30; i++) state.particles.push({ x, y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1.0, color, size: Math.random()*8+4 });
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+function update() {
+    const W = canvas.width;
+    const lvl = LEVELS[state.currentLevelIdx];
+
+    state.action = 'walk';
+    state.pipYOffset = 0;
+
+    if (state.isAnimating) {
+        // Sound for walking (throttled)
+        if (Date.now() % 300 < 20 && state.action === 'walk') Sound.step();
+
+        if (Math.abs(state.pipX - state.targetPipX) > 0.005) {
+            state.pipX += (state.targetPipX - state.pipX) * 0.02;
+
+            // ANIMATION LOGIC
+            let passedStep = null;
+            if (state.levelSolved) {
+                 passedStep = lvl.steps[lvl.steps.length-1];
+            } else if (state.currentStepIdx > 0) {
+                 passedStep = lvl.steps[state.currentStepIdx - 1];
+            }
+
+            if (passedStep) {
+                const dist = Math.abs(state.pipX - passedStep.x);
+                if (dist < 0.15) {
+                    if (passedStep.type === 'wall') {
+                        state.action = 'climb';
+                        if (Date.now() % 200 < 20) Sound.climb();
+                        const h = 100;
+                        state.pipYOffset = -h * (1 - dist/0.15); 
+                    } 
+                    else if (passedStep.type === 'lake') {
+                        state.action = 'swim';
+                        if (Date.now() % 400 < 20) Sound.splash();
+                        state.pipYOffset = 15; 
+                    }
+                    else if (passedStep.type === 'rope_gap') {
+                        state.action = 'swing';
+                        state.pipYOffset = Math.sin(Date.now()/200) * 10 + 20; 
+                    }
+                    else if (passedStep.type === 'lava_river') {
+                        state.action = 'jump';
+                        state.pipYOffset = -Math.abs(Math.sin(Date.now()/100)) * 20;
+                    }
+                }
+            }
+
+            if (state.levelSolved && state.pipX > 0.82) {
+                state.pipAlpha -= 0.05;
+                if(state.pipAlpha < 0) state.pipAlpha = 0;
+            }
+        } else {
+            state.isAnimating = false;
+            if (state.levelSolved) {
+                Sound.success();
+                setTimeout(() => {
+                    document.getElementById('message-overlay').classList.remove('hidden');
+                }, 300);
+            }
+        }
+    }
+
+    state.clouds.forEach(c => { c.x += c.speed; if(c.x > W + c.size) c.x = -c.size; });
+    state.particles.forEach(p => { p.x+=p.vx; p.y+=p.vy; p.life-=0.02; p.vy+=0.5; });
+    state.particles = state.particles.filter(p => p.life > 0);
+    state.blinkTimer--; if (state.blinkTimer < 0) state.blinkTimer = Math.random() * 200 + 100;
+}
+
+function draw() {
+    const W = canvas.width, H = canvas.height;
+    const lvl = LEVELS[state.currentLevelIdx];
+    const groundY = H * 0.65;
+
+    // Background
+    const themes = {
+        jungle: ['#4CB050', '#81C784', '#1B5E20'],
+        mountain: ['#90A4AE', '#B0BEC5', '#37474F'],
+        volcano: ['#FF5722', '#FF8A65', '#3E2723'],
+        village: ['#03A9F4', '#4FC3F7', '#5D4037']
+    };
+    const colors = themes[lvl.theme];
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, colors[0]); grad.addColorStop(1, colors[1]);
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+    // Clouds
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    state.clouds.forEach(c => { 
+        ctx.beginPath(); ctx.arc(c.x, c.y, c.size, 0, Math.PI*2); 
+        ctx.arc(c.x+c.size*0.5, c.y-c.size*0.2, c.size*0.8, 0, Math.PI*2); 
+        ctx.arc(c.x-c.size*0.5, c.y-c.size*0.2, c.size*0.8, 0, Math.PI*2); 
+        ctx.fill(); 
+    });
+
+    // Ground
+    ctx.fillStyle = colors[2];
+    ctx.fillRect(0, groundY, W, H - groundY);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)'; 
+    ctx.fillRect(0, groundY, W, 20);
+
+    // Obstacles
+    lvl.steps.forEach((step, idx) => {
+        const solved = idx < state.currentStepIdx;
+        const xPos = step.x * W;
+        drawObstacle(ctx, step.type, xPos, groundY, solved, colors);
+    });
+
+    // House
+    drawHouse(ctx, 0.85 * W, groundY, lvl.theme);
+
+    // Particles
+    state.particles.forEach(p => { 
+        ctx.globalAlpha = p.life; ctx.fillStyle = p.color; 
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill(); 
+    });
+    ctx.globalAlpha = 1;
+
+    // Pip
+    drawPip(ctx, state.pipX * W, groundY - 20 + state.pipYOffset, lvl.outfit, state.action);
+}
+
+function drawObstacle(ctx, type, cx, groundY, solved, themeColors) {
+    const W = canvas.width;
+    const gapWidth = W * 0.15;
+
+    if (type === 'gap' || type === 'rope_gap') {
+        ctx.clearRect(cx - gapWidth/2, groundY, gapWidth, canvas.height);
+        ctx.fillStyle = (type==='rope_gap') ? '#263238' : '#3E2723'; 
+        ctx.fillRect(cx - gapWidth/2, groundY, gapWidth, 300);
+        
+        if (solved) {
+            if (type === 'gap') { // Bridge
+                ctx.fillStyle = '#8D6E63'; 
+                ctx.fillRect(cx - gapWidth/2 - 10, groundY + 5, gapWidth + 20, 10);
+                ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(cx - gapWidth/2, groundY); 
+                ctx.quadraticCurveTo(cx, groundY + 20, cx + gapWidth/2, groundY); ctx.stroke();
+            } else { // Rope
+                ctx.strokeStyle = '#A1887F'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(cx - gapWidth/2 - 20, groundY - 60);
+                ctx.quadraticCurveTo(cx, groundY - 20, cx + gapWidth/2 + 20, groundY - 60);
+                ctx.stroke();
+            }
+        }
+    } 
+    else if (type === 'gate') {
+        ctx.fillStyle = '#5D4037'; ctx.fillRect(cx - 5, groundY - 80, 10, 80);
+        if (!solved) {
+            ctx.fillStyle = '#FFD54F'; ctx.fillRect(cx - 8, groundY - 45, 16, 20);
+        } else {
+            ctx.save(); ctx.translate(cx, groundY); ctx.rotate(Math.PI/4);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0, 0, 80, 10); ctx.restore();
+        }
+    }
+    else if (type === 'wall') {
+        ctx.fillStyle = themeColors[2]; ctx.fillRect(cx - 20, groundY - 100, 40, 100);
+        if (solved) {
+            ctx.fillStyle = '#FFB74D';
+            ctx.fillRect(cx - 15, groundY - 100, 5, 100); ctx.fillRect(cx + 10, groundY - 100, 5, 100);
+            for(let i=0; i<8; i++) ctx.fillRect(cx - 15, groundY - 10 - (i*12), 30, 4);
+        }
+    }
+    else if (type === 'fire') {
+        ctx.fillStyle = '#8D6E63'; ctx.fillRect(cx - 40, groundY + 5, 80, 10);
+        if (!solved) {
+            ctx.fillStyle = '#FF5722'; ctx.beginPath(); ctx.arc(cx, groundY, 20, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#FFEB3B'; ctx.beginPath(); ctx.arc(cx, groundY+5, 12, 0, Math.PI*2); ctx.fill();
+        } else {
+            ctx.fillStyle = '#29B6F6'; ctx.beginPath(); ctx.ellipse(cx, groundY + 5, 25, 5, 0, 0, Math.PI*2); ctx.fill();
+        }
+    }
+    else if (type === 'lava_river' || type === 'lake') {
+        ctx.fillStyle = type === 'lake' ? '#4FC3F7' : '#FF5722';
+        ctx.fillRect(cx - 30, groundY, 60, 300);
+        if (solved) {
+            if (type === 'lava_river') {
+                ctx.fillStyle = '#616161'; ctx.beginPath(); ctx.arc(cx, groundY + 10, 15, 0, Math.PI*2); ctx.fill();
+            } else {
+                ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.arc(cx, groundY, 10, 0, Math.PI*2); ctx.fill();
+            }
+        }
+    }
+    else if (type === 'dog') {
+        if (!solved) {
+            ctx.fillStyle = '#5D4037'; ctx.beginPath(); ctx.arc(cx, groundY - 15, 15, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(cx-5, groundY-18, 2, 0, Math.PI*2); ctx.fill();
+        } else {
+            ctx.fillStyle = '#5D4037'; ctx.beginPath(); ctx.arc(cx, groundY - 15, 15, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#F06292'; ctx.beginPath(); ctx.arc(cx + 15, groundY - 15, 8, 0, Math.PI*2); ctx.fill();
+        }
+    }
+}
+
+function drawHouse(ctx, x, y, theme) {
+    const s = 1.2;
+    ctx.fillStyle = theme === 'jungle' ? '#8D6E63' : theme === 'mountain' ? '#546E7A' : theme === 'volcano' ? '#3E2723' : '#FFCC80';
+    ctx.fillRect(x - 30*s, y - 60*s, 60*s, 60*s);
+    ctx.fillStyle = theme === 'jungle' ? '#2E7D32' : theme === 'mountain' ? '#ECEFF1' : theme === 'volcano' ? '#212121' : '#E65100';
+    ctx.beginPath(); ctx.moveTo(x - 40*s, y - 60*s); ctx.lineTo(x, y - 90*s); ctx.lineTo(x + 40*s, y - 60*s); ctx.fill();
+    ctx.fillStyle = '#3E2723'; ctx.fillRect(x - 10*s, y - 40*s, 20*s, 40*s);
+}
+
+function drawPip(ctx, x, y, outfit, action) {
+    const size = 25; ctx.save(); ctx.translate(x, y);
+    ctx.globalAlpha = state.pipAlpha;
+    
+    if (action === 'swim') ctx.rotate(Math.PI / 4);
+    if (action === 'swing') ctx.rotate(Math.sin(Date.now()/200) * 0.5);
+
+    // Legs
+    ctx.fillStyle = CONFIG.colors.pipBody; ctx.lineWidth = 4;
+    let legOffset = state.isAnimating ? Math.sin(Date.now()/100)*0.5 : 0;
+    if (action === 'climb') legOffset = Math.sin(Date.now()/50)*0.8;
+    
+    if (action !== 'swim') {
+        ctx.beginPath(); ctx.ellipse(-10, size, 5, 10, legOffset, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(10, size, 5, 10, -legOffset, 0, Math.PI*2); ctx.fill();
+    } else {
+        ctx.fillStyle = '#4DB6AC';
+        ctx.beginPath(); ctx.ellipse(-10, size+5, 8, 12, 0.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(10, size+5, 8, 12, -0.5, 0, Math.PI*2); ctx.fill();
+    }
+
+    // Body
+    ctx.fillStyle = CONFIG.colors.pipBody; ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = CONFIG.colors.pipBelly; ctx.beginPath(); ctx.arc(0, 5, size*0.6, 0, Math.PI*2); ctx.fill();
+
+    // Arms
+    ctx.strokeStyle = CONFIG.colors.pipBody; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    if (action === 'climb') {
+        ctx.beginPath(); ctx.moveTo(-20, -10 + legOffset*10); ctx.lineTo(-20, -30); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(20, -10 - legOffset*10); ctx.lineTo(20, -30); ctx.stroke();
+    } else if (action === 'swim') {
+        ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(-30, 10); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(30, -10); ctx.stroke();
+        // Mask
+        ctx.fillStyle = '#4DB6AC'; ctx.fillRect(-15, -15, 30, 10);
+        ctx.strokeStyle = '#00695C'; ctx.lineWidth=2; ctx.strokeRect(-15, -15, 30, 10);
+    } else if (action === 'swing') {
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -40); ctx.stroke(); 
+    }
+
+    // Outfit
+    if (action !== 'swim') {
+        if (outfit === 'adventurer') {
+            ctx.fillStyle = '#D7CCC8'; ctx.beginPath(); ctx.ellipse(0, -18, 28, 6, 0, 0, Math.PI*2); ctx.fill(); 
+            ctx.beginPath(); ctx.arc(0, -22, 14, Math.PI, 0); ctx.fill();
+        } else if (outfit === 'climber') {
+            ctx.fillStyle = '#FFEB3B'; ctx.beginPath(); ctx.arc(0, -15, 18, Math.PI, 0); ctx.fill();
+        } else if (outfit === 'firefighter') {
+            ctx.fillStyle = '#D32F2F'; ctx.beginPath(); ctx.moveTo(-22,-8); ctx.lineTo(22,-8); ctx.quadraticCurveTo(0,-35,-22,-8); ctx.fill(); 
+        }
+    }
+
+    // Face
+    if (action !== 'swim') {
+        if (state.blinkTimer > 10) {
+            ctx.fillStyle = 'white'; ctx.beginPath(); ctx.ellipse(-8, -5, 6, 8, 0, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(8, -5, 6, 8, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'black'; 
+            const dir = state.targetPipX > state.pipX/canvas.width ? 2 : -2;
+            ctx.beginPath(); ctx.arc(-8+dir, -5, 3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(8+dir, -5, 3, 0, Math.PI*2); ctx.fill();
+        } else {
+            ctx.strokeStyle = '#3E2723'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-14, -5); ctx.lineTo(-2, -5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(2, -5); ctx.lineTo(14, -5); ctx.stroke();
+        }
+        ctx.strokeStyle = '#3E2723'; ctx.lineWidth = 2; ctx.beginPath(); state.levelSolved ? ctx.arc(0, 5, 5, 0, Math.PI) : ctx.arc(0, 8, 3, 0.2, Math.PI - 0.2); ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+init();
+</script>
+</body>
+</html>
